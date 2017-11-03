@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CATS-SAFe Delivery Metrics-0.1</title>
+    <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
+    <!--  Build Date: Wed Nov 01 2017 16:34:49 GMT-0600 (MDT) -->
+
+    <script type="text/javascript">
+        var APP_BUILD_DATE = "Wed Nov 01 2017 16:34:49 GMT-0600 (MDT)";
+        var ARTIFACT = "F391";
+        var BUILDER  = "corkr03";
+        var CHECKSUM = 2671696879;
+    </script>
+
+    <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
+    <!-- our highcharts (needed so that we can add patterns)
+    <script type="text/javascript" src="/apps/2.1/lib/analytics/analytics-all.js"></script>
+    -->
+
+
+    <script type="text/javascript">
+        Rally.onReady(function() {
+            Ext.define("Rally.technicalservices.InfoLink",{extend:"Rally.ui.dialog.Dialog",alias:"widget.tsinfolink",informationHtml:null,title:"Build Information",defaults:{padding:5,margin:5},closable:!0,draggable:!0,autoShow:!0,width:350,informationalConfig:null,showLog:!1,logger:null,items:[{xtype:"container",itemId:"information"},{xtype:"container",itemId:"button_box"}],initComponent:function(){Ext.id(this);this.title="<span class='icon-help'> </span>"+this.title,this.callParent(arguments)},_generateChecksum:function(a){var b,c=305419896;for(a=a.replace(/var CHECKSUM = .*;/,""),a=a.replace(/var BUILDER  = .*;/,""),a=a.replace(/\s/g,""),b=0;b<a.length;b++)c+=a.charCodeAt(b)*b;return c},_checkChecksum:function(a){var b=Ext.create("Deft.Deferred"),c=this;return Ext.Ajax.request({url:document.URL,params:{id:1},success:function(a){if(text=a.responseText,CHECKSUM){var d=c._generateChecksum(text);if(CHECKSUM!==d)return void b.resolve(!1)}b.resolve(!0)}}),b.promise},_addToContainer:function(a){var b=Ext.apply({xtype:"container",height:200,overflowY:!0},this.informationalConfig);a.add(b)},afterRender:function(){var a=Rally.getApp();if(!Ext.isEmpty(this.informationalConfig)){var b=this.down("#information");this._addToContainer(b)}this.showLog&&this.logger&&this.down("#button_box").add({xtype:"rallybutton",text:"Show Log",listeners:{scope:this,click:function(){this.logger.displayLog()}}}),a.isExternal()?this.addDocked({xtype:"container",cls:"build-info",padding:2,dock:"bottom",html:"... Running externally"}):this._checkChecksum(a).then({scope:this,success:function(a){a||this.addDocked({xtype:"container",cls:"build-info",dock:"bottom",padding:2,html:'<span class="icon-warning"> </span>Checksums do not match'})},failure:function(a){console.log("oops:",a)}}),this.callParent(arguments)},beforeRender:function(){if(this.callParent(arguments),this.informationHtml&&this.addDocked({xtype:"component",componentCls:"intro-panel",padding:2,html:this.informationHtml,dock:"bottom"}),this.addDocked({xtype:"container",cls:"build-info",padding:2,dock:"bottom",html:"This app was created by the CA AC Technical Services Team."}),APP_BUILD_DATE){var a=Ext.String.format("Built on: {0} <br/>Built by: {1}",APP_BUILD_DATE,BUILDER);ARTIFACT&&(a=a+"<br/>Source artifact: "+ARTIFACT),this.addDocked({xtype:"container",cls:"build-info",padding:2,dock:"top",html:a})}}}),Ext.define("CArABU.technicalservices.Logger",{saveForLater:!1,saveLines:100,logArray:[],constructor:function(a){Ext.apply(this,a)},setSaveForLater:function(a){this.saveForLater=a},log:function(a){var b="[ "+Ext.util.Format.date(new Date,"Y-m-d H:i:s.u")+" ]",c=[];c=Ext.Array.push(c,[b]),c=Ext.Array.push(c,Ext.Array.slice(arguments,0)),this.saveForLater&&(this.logArray||(this.logArray=[]),this.logArray.push(c.join(" ")),this.logArray.length>this.saveLines&&this.logArray.shift()),window.console&&console.log.apply(console,c)},getLogText:function(){return this.logArray&&0!==this.logArray.length?this.logArray.join("<br/>"):"-- no log --"},displayLog:function(){var a=this.getLogText();this.popup=Ext.create("Rally.ui.dialog.Dialog",{width:Ext.getBody().getWidth()-20,height:Ext.getBody().getHeight()-20,closable:!0,title:"Log",autoShow:!0,layout:"border",defaults:{layout:"fit",width:"50%",border:!1},items:[{region:"center",xtype:"container",html:a,autoScroll:!0}]})}}),Ext.define("TSUtilities",{singleton:!0,loadWsapiRecords:function(a){var b=Ext.create("Deft.Deferred"),c={model:"Defect",fetch:["ObjectID"]};return Ext.create("Rally.data.wsapi.Store",Ext.Object.merge(c,a)).load({callback:function(a,c,d){d?b.resolve(a):(console.error("Failed: ",c),b.reject("Problem loading: "+c.error.errors.join(". ")))}}),b.promise},loadAStoreWithAPromise:function(a,b){var c=Ext.create("Deft.Deferred");return Ext.create("Rally.data.wsapi.Store",{model:a,fetch:b}).load({callback:function(a,b,d){d?c.resolve(this):(console.error("Failed: ",b),c.reject("Problem loading: "+b.error.errors.join(". ")))}}),c.promise}}),Ext.define(CArABU.app.utils.teamMetricsCalculator,{constructor:function(a){this.project=a.project||{},this.iterations=this._filterIterations(a.iterations),this.snapshots=this._filterSnapshots(a.snapshots)},_filterSnapshots:function(a){return this._getRecordsByField(a||[],"Project",this.project.ObjectID)},_filterIterations:function(a){return this._getRecordsByField(a||[],"Project",this.project.ObjectID,"ObjectID")},_getRecordsByField:function(a,b,c,d){for(var e=[],f=0;f<a.length;f++){var g=a[f].get(b);d&&(g=g[d]),g===c&&e.push(a[f].getData())}return e}}),Ext.define("CArABU.app.safeDeliveryMetrics",{extend:"Rally.app.App",componentCls:"app",logger:new CArABU.technicalservices.Logger,defaults:{margin:10},layout:"border",items:[{xtype:"container",flex:1,itemId:"grid_box1",region:"west"},{xtype:"container",flex:1,itemId:"grid_box2",region:"east"}],integrationHeaders:{name:"CArABU.app.TSApp"},launch:function(){var a=this;this.setLoading("Loading stuff..."),this.logger.setSaveForLater(this.getSetting("saveLog")),Deft.Chain.sequence([function(){return TSUtilities.loadAStoreWithAPromise("Defect",["Name","State"])},function(){return TSUtilities.loadWsapiRecords({model:"Defect",fetch:["Name","State"]})}]).then({scope:this,success:function(a){var b=a[0],c=a[1],d=["Name","State"];this._displayGridGivenStore(b,d),this._displayGridGivenRecords(c,d)},failure:function(a){alert(a)}}).always(function(){a.setLoading(!1)})},_displayGridGivenStore:function(a,b){this.down("#grid_box1").add({xtype:"rallygrid",store:a,columnCfgs:b})},_displayGridGivenRecords:function(a,b){var c=Ext.create("Rally.data.custom.Store",{data:a}),d=Ext.Array.map(b,function(a){return{dataIndex:a,text:a,flex:1}});this.down("#grid_box2").add({xtype:"rallygrid",store:c,columnCfgs:d})},getSettingsFields:function(){var a="5 0 5 0";return[{name:"saveLog",xtype:"rallycheckboxfield",boxLabelAlign:"after",fieldLabel:"",margin:a,boxLabel:'Save Logging<br/><span style="color:#999999;"><i>Save last 100 lines of log for debugging.</i></span>'}]},getOptions:function(){var a=[{text:"About...",handler:this._launchInfo,scope:this}];return a},_launchInfo:function(){this.about_dialog&&this.about_dialog.destroy(),this.about_dialog=Ext.create("Rally.technicalservices.InfoLink",{showLog:this.getSetting("saveLog"),logger:this.logger})},isExternal:function(){return"undefined"==typeof this.getAppId()}});
+
+               Rally.launchApp('CArABU.app.safeDeliveryMetrics', {
+                   name: 'SAFe Delivery Metrics'
+               });
+        });
+    </script>
+
+    <style type="text/css">
+
+.app {
+}
+.tsinfolink {
+    position:absolute;
+    right:0px;
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    text-align: center;
+    color: white;
+    background: #C0C0C0;
+    border-style: solid;
+    border-width: 1px;
+    margin-top: 25px;
+    margin-right: 5px;
+    cursor: pointer;
+}
+    </style>
+
+</head>
+<body></body>
+</html>
