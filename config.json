@@ -1,0 +1,7 @@
+{
+    "name": "SAFe Delivery Metrics",
+    "sdk": "2.1",
+    "version": "0.1",
+    "className": "CArABU.app.safeDeliveryMetrics",
+    "artifact": "F391"
+}
