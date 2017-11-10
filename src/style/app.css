@@ -1,4 +1,5 @@
 .app {
+   background-color: #fff;
 }
 .tsinfolink {
     position:absolute;
@@ -14,4 +15,20 @@
     margin-top: 25px;
     margin-right: 5px;
     cursor: pointer;
+}
+
+.app-msg {
+   font-family: ProximaNova,helvetica,sans-serif;
+   font-size: 14px;
+   color: #666;
+   text-align: center;
+}
+.app-panel .x-panel-header-text {
+   font-family: ProximaNova,helvetica,sans-serif;
+   color: #555;
+}
+
+.app-summary {
+  font-family: ProximaNovaSemiBold,Helvetica,Arial;
+  text-transform: uppercase;
 }

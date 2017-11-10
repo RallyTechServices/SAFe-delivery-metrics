@@ -169,7 +169,7 @@ describe("Team Metrics Calculator", function() {
       expect(calcA.getAcceptedPoints('Iteration 1')).toBe(9);
       expect(calcA.getAcceptanceRatio('Iteration 1')).toBe(1);
 
-      //TODO add 0 and edge cases here 
+      //TODO add 0 and edge cases here
 
     });
     //
