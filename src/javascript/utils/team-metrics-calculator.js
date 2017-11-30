@@ -57,11 +57,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
      if (!iteration){ this.calculatedData[iterationName] = {}; }
 
-     console.log('before pipoffsetdate', iteration, this.release, this.daysOffsetFromPIStart);
      var offsetDate = Rally.util.DateTime.add(iteration.StartDate, 'day', daysOffsetFromIterationStart),
          iterationEndDate = iteration.EndDate,
          pipOffsetDate = Rally.util.DateTime.add(this.release.ReleaseStartDate, 'day', this.daysOffsetFromPIStart);;
-    console.log('pipoffsetdate')
      var snaps = this.snapshotsByIterationOid[iteration.ObjectID] || [],
          blockedDurations = {};
 
@@ -350,7 +348,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      if (!this.calculatedData[iterationName]){
         this._calculate(iterationName);
      }
-     return this.calculatedData[iterationName].piPlanVelocity || 0;
+     return Number(this.calculatedData[iterationName].piPlanVelocity) || 0;
    },
    getPIPLoadPlanned: function(iterationName){
      if (!this.calculatedData[iterationName]){

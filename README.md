@@ -6,7 +6,8 @@
 
 ![screenshot](./images/screenshot.png "This is an example")
 
-The dataset used in this app is all user stories and defects associated with an iteration that overlaps with the selected release date boundaries.  The story or defect does not need to be explicitly associated with the release if it is explicitly associated with an iteration that overlaps with the release boundaries.  
+The dataset used in this app is all user stories and defects in leaf projects (projects with no children) associated with an iteration that overlaps with the selected release date boundaries.  The story or defect does not need to be explicitly associated with the release if it is explicitly associated with an iteration that overlaps with the release boundaries.  
+
 
 ### PI Planned Velocity
 This is the value of the Planned Velocity set for the iteration at the moment in time that represents the number of days offset from the selected Release (see Days Offset from Release App Setting).  This value is calculated from
@@ -14,7 +15,7 @@ parsing the Revision History for the Iteration object.
 
 ### PI Planned Load
 This is the sum of the story points for all stories and defects explicitly associated with the iteration
-at the moment in time that represents the number of days offset from the selected Release (see Days Offset from Release App Setting). 
+at the moment in time that represents the number of days offset from the selected Release (see Days Offset from Release App Setting).
 
 ## App Settings
 ### Days Offset from Iteration

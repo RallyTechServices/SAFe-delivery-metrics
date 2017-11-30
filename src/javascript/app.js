@@ -23,7 +23,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       }
     },
 
-    releaseFetchList: ['ObjectID','Project','Name','ReleaseStartDate'],
+    releaseFetchList: ['ObjectID','Project','Name','ReleaseStartDate','Children'],
 
     launch: function() {
       this.logger.log('this.', this._hasScope())
@@ -72,6 +72,9 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
             },{
               property: 'ReleaseDate',
               value: release.get('ReleaseDate')
+            },{
+              property: 'Project.Children.ObjectID',  //This is only going to get leaf projects
+              value: ""
             }];
 
         Ext.create('Rally.data.wsapi.Store',{
@@ -105,6 +108,9 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
             property: 'StartDate',
             operator: '<',
             value: release.get('ReleaseDate')
+          },{
+            property: 'Project.Children.ObjectID',
+            value: ""
           }];
 
       Ext.create('Rally.data.wsapi.Store',{
@@ -193,7 +199,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            "Iteration": {$in: timeboxOids},
            "_ValidTo": {$gte: earliestDate},
            "_ValidFrom": {$lte: latestDate},
-           "_ProjectHierarchy": this.getContext().getProject().ObjectID
+           "_ProjectHierarchy": this.getContext().getProject().ObjectID //This probably isn't needed since the iterations are specified 
           },
           hydrate: ['_TypeHierarchy','Project'],
           limit: 'Infinity',
@@ -253,7 +259,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
              scope: this
         },{
           type:'close',
-          tooltip: 'Close Panel',
+          tooltip: 'Collapse panel to see Summary data',
           renderTpl: [
             '<div class="control icon-chevron-down" style="margin-right:20px"></div>'
           ],
@@ -296,13 +302,12 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
              handler: this._exportSummary,
              scope: this
         },{
-          tooltip: 'Close Panel',
+          tooltip: 'Collapse panel to see team detail data',
           renderTpl: [
             '<div class="control icon-chevron-down" style="margin-right:20px"></div>'
           ],
          width: 35,
           handler: function(evt, toolEl, panelHeader, toolObj) {
-            console.log('handler',evt,toolEl,panelHeader,toolObj);
             this.down('#summary').collapse();
           },
           scope: this
