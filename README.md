@@ -6,7 +6,22 @@
 
 ![screenshot](./images/screenshot.png "This is an example")
 
-Caveats:  
+The dataset used in this app is all user stories and defects associated with an iteration that overlaps with the selected release date boundaries.  The story or defect does not need to be explicitly associated with the release if it is explicitly associated with an iteration that overlaps with the release boundaries.  
+
+### PI Planned Velocity
+This is the value of the Planned Velocity set for the iteration at the moment in time that represents the number of days offset from the selected Release (see Days Offset from Release App Setting).  This value is calculated from
+parsing the Revision History for the Iteration object.  
+
+### PI Planned Load
+This is the sum of the story points for all stories and defects explicitly associated with the iteration
+at the moment in time that represents the number of days offset from the selected Release (see Days Offset from Release App Setting). 
+
+## App Settings
+### Days Offset from Iteration
+### Days Offset from Release
+### Defect Tags
+
+## Caveats:  
 If an artifact was accepted within the sprint boundaries and then moved from the sprint, it will not be counted in the accepted points in the sprint since we are using the currently accepted points for work items associated with the sprint.
 
 ## Development Notes

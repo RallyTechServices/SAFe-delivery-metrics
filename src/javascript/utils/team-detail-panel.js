@@ -3,13 +3,18 @@ Ext.define('CArABU.utils.panel.TeamDetailPanel',{
   extend: 'Ext.container.Container',
   alias: 'widget.teamdetailpanel',
 
-  // title: 'Team Detail',
-  // collapsible: true,
-  // cls: 'app-panel',
-  // layout: {
-  //   type: 'vbox'
-  // },
-  // height: 800,
+  cls: 'inline-filter-panel',
+
+  flex: 1,
+  header: false,
+  minHeight: 46,
+  padding: '8px 0 0 0',
+  bodyPadding: '7px 5px 5px 5px',
+  collapseDirection: 'top',
+  collapsible: true,
+  animCollapse: false,
+  stateful: true,
+  stateId: 'listFilterPanel',
 
   autoScroll: true,
 

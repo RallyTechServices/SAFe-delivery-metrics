@@ -3,12 +3,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
     componentCls: 'app',
     logger: new CArABU.technicalservices.Logger(),
     defaults: { margin: 10 },
-    //  layout: 'border',
-    //  defaults: {
-    //      collapsible: true,
-    //      split: true,
-    //      bodyPadding: 15
-    //  },
+
     layout: {
     // layout-specific configs go here
       type: 'accordion',
@@ -18,6 +13,13 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
     },
     integrationHeaders : {
         name : "CArABU.app.TSApp"
+    },
+    config: {
+      defaultSettings: {
+        daysOffsetFromIterationStart: 0,
+        defectTag: null,
+        daysOffsetFromPIStart: 0
+      }
     },
 
     launch: function() {
@@ -40,6 +42,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
        this.setLoading(true);
        Deft.Chain.pipeline([
          this._fetchIterations,
+         this._fetchIterationRevisions,
          this._fetchReleases,
          this._fetchSnapshots
        ],this,{}).then({
@@ -104,7 +107,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       Ext.create('Rally.data.wsapi.Store',{
          model: 'Iteration',
          filters: filters,
-         fetch: ['ObjectID','Project','Name','StartDate','EndDate'],
+         fetch: ['ObjectID','Project','Name','StartDate','EndDate','RevisionHistory','PlannedVelocity','CreationDate'],
          limit: 'Infinity',
          pageSize: 2000
       }).load({
@@ -120,30 +123,79 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
 
       return deferred.promise;
     },
+    _fetchIterationRevisions: function(data){
+      var deferred = Ext.create('Deft.Deferred');
+
+      var filters = _.map(data.iterations, function(i){
+          return {
+             property: 'RevisionHistory.ObjectID',
+             value: i.get('RevisionHistory').ObjectID
+          };
+      });
+      filters = Rally.data.wsapi.Filter.or(filters);
+      this.logger.log('filters', filters.toString());
+      filters = filters.and({
+          property: 'Description',
+          operator: 'contains',
+          value: 'PLANNED VELOCITY'
+      });
+
+      Ext.create('Rally.data.wsapi.Store',{
+         model: 'Revision',
+         filters: filters,
+         fetch: ['ObjectID','RevisionHistory','Description','CreationDate'],
+         limit: 'Infinity',
+         pageSize: 2000,
+         enablePostGet: true,
+         sorters: [{
+            property: 'CreationDate',
+            direction: 'ASC'
+         }]
+      }).load({
+         callback: function(records,operation){
+            if (operation.wasSuccessful()){
+              data.iterationRevisions = records;
+              deferred.resolve(data);
+            } else {
+              deferred.reject('ERROR loading iteration revisions: ' + operation.error && operation.error.errors.join(','));
+            }
+         }
+      });
+
+      return deferred.promise;
+    },
     _fetchSnapshots: function(data){
        var deferred = Ext.create('Deft.Deferred');
-
-
-       var releaseOids = _.map(data.releases, function(r){
-          return r.get('ObjectID');
+       var earliestDate = new Date('2999-01-01'),
+          latestDate = new Date('1900-01-01'),
+          timeboxOids = [];
+       _.each(data.iterations, function(r){
+          if (r.get('StartDate') < earliestDate){
+             earliestDate = r.get('StartDate');
+          }
+          if (r.get('EndDate') > latestDate){
+             latestDate = r.get('EndDate');
+          }
+          timeboxOids.push(r.get('ObjectID'));
        });
-       this.logger.log('_fetchSnapshots ', releaseOids);
+       this.logger.log('_fetchSnapshots -- ', timeboxOids, earliestDate, latestDate);
 
-       var earliestDate = this.getReleaseTimeboxRecord().get('ReleaseStartDate'),
-          latestDate = this.getReleaseTimeboxRecord().get('ReleaseDate');
+      //  var earliestDate = this.getReleaseTimeboxRecord().get('ReleaseStartDate'),
+      //     latestDate = this.getReleaseTimeboxRecord().get('ReleaseDate');
 
        Ext.create('Rally.data.lookback.SnapshotStore',{
-         fetch: ['ObjectID','Project','Iteration','PlanEstimate','AcceptedDate','Blocked','_ValidFrom','_ValidTo','_TypeHierarchy'],
+         fetch: ['ObjectID','Project','Iteration','PlanEstimate','AcceptedDate','Blocked','_ValidFrom','_ValidTo','_TypeHierarchy','Tags'],
          find:{
            "_TypeHierarchy": {$in: ['Defect','HierarchicalRequirement']},
-           "Release": {$in: releaseOids},
+           "Iteration": {$in: timeboxOids},
            "_ValidTo": {$gte: earliestDate},
            "_ValidFrom": {$lte: latestDate},
            "_ProjectHierarchy": this.getContext().getProject().ObjectID
           },
           hydrate: ['_TypeHierarchy','Project'],
           limit: 'Infinity',
-          removeUnauthorizedSnapshots: true
+          removeUnauthorizedSnapshots: true,
+          sort: { "_ValidFrom": 1 }
        }).load({
           callback: function(records, operation){
               if (operation.wasSuccessful()){
@@ -154,37 +206,63 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
               }
           }
        });
-
        return deferred.promise;
     },
     _buildDisplay: function(data){
       this.logger.log('_buildDisplay',data);
 
       var items = [],
-          newData = [];
+          newData = [],
+          calcs = [];
       _.each(data.releases, function(r){
           var project = r.get('Project');
           var calc = Ext.create('CArABU.app.utils.teamMetricsCalculator',{
              project: project,
+             release: r.getData(),
              iterations: data.iterations,
-             snapshots: data.snapshots
+             snapshots: data.snapshots,
+             iterationRevisions: data.iterationRevisions,
+             daysOffsetFromIterationStart: this.getdaysOffsetFromIterationStart(),
+             defectTag: this.getDefectTag()
           });
 
           //newData = newData.concat(calc.getData());
           items.push(this._addTeamGrid(calc.getData(), project.Name));
-          console.log('project',project);
+          calcs.push(calc);
       }, this);
 
       this.add({
         xtype:'panel',
         height: items.length * 400,
         autoScroll: true,
+        cls: 'fieldBucket',
+        flex: 1,
+        itemId: 'teamDetail',
+        tools:[{
+          type:'close',
+          tooltip: 'Close Panel',
+          renderTpl: [
+            '<div class="control icon-chevron-down" style="margin-right:20px"></div>'
+          ],
+         renderSelectors: {
+             toolEl: '.icon-chevron-down'
+         },
+         width: 35,
+          handler: function(event, toolEl, panelHeader) {
+            console.log('huh')
+            this.down('#teamDetail').collapse();
+          },
+          scope: this
+        }],
+        hideCollapseTool: true,
+        padding: '8px 0 0 0',
+        bodyPadding: '7px 5px 5px 5px',
+        collapseDirection: 'top',
+        collapsible: true,
+        animCollapse: false,
+
         items: items,
         title: 'Teams',
-        // region: 'center',
-        // collapsible: true,
-        // collapseMode: 'header',
-        // resizable: true
       });
 
       this.add({
@@ -192,54 +270,56 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         height: 600,
         autoScroll: true,
         title: "Summary",
-      //   region: 'west',
-      //   collapsed: true ,
-      //   maxWidth: '100%',
-      //  resizable: true ,
-        items: [this._getSummaryGrid(data)]
+        //autoScroll: true,
+        cls: 'fieldBucket',
+        flex: 1,
+        itemId: 'summary',
+        tools:[{
+          type:'close',
+          tooltip: 'Close Panel',
+          renderTpl: [
+            '<div class="control icon-chevron-down" style="margin-right:20px"></div>'
+          ],
+         renderSelectors: {
+             toolEl: '.icon-chevron-down'
+         },
+         width: 35,
+          handler: function(event, toolEl, panelHeader) {
+            this.down('#summary').collapse();
+          },
+          scope: this
+        }],
+        hideCollapseTool: true,
+        padding: '8px 0 0 0',
+        bodyPadding: '7px 5px 5px 5px',
+        collapseDirection: 'top',
+        collapsible: true,
+        animCollapse: false,
+        items: [this._getSummaryGrid(calcs)]
       });
-
-      //return this.add(this._addGroupedTeamGrid(newData));
-
-
-      // this.add({
-      //    xtype: 'summarypanel',
-      //    //region: 'north',
-      //    releases: data.releases,
-      //    iterations: data.iterations,
-      //    snapshots: data.snapshots
-      // });
-
-      // this.add({
-      //    xtype: 'teamdetailpanel',
-      //   // region: 'center',
-      //    releases: data.releases,
-      //    iterations: data.iterations,
-      //    snapshots: data.snapshots
-      // });
 
     },
-    _getSummaryGrid: function(data){
+    _getSummaryGrid: function(calcs){
       var newData = [];
-      _.each(data.releases, function(r){
-          var project = r.get('Project').Name;
+      _.each(calcs, function(c){
+         var project = c.project;
          newData.push({
            project: project,
-           pointsPlanned: 1,
-           pointsAccepted: 1,
-           acceptanceRatio: 1,
-           pointsAdded: 0,
-           daysBlocked: 0,
-           blockerResolution: 0,
-           defectsClosed: 0
+           pointsPlanned: c.getPlannedPointsTotal(),
+           pointsAccepted: c.getAcceptedPointsTotal(),
+           acceptanceRatio: c.getAcceptanceRatioTotal(),
+           pointsAdded: c.getPointsAfterCommitmentTotal(),
+           daysBlocked: c.getDaysBlockedTotal(),
+           blockerResolution: c.getBlockerResolutionTotal(),
+           defectsClosed: c.getDefectsClosedTotal()
          });
       });
-      this.logger.log('data',newData, data);
+      this.logger.log('data',newData);
 
       var store = Ext.create('Rally.data.custom.Store',{
-             fields: ['project','pointsPlanned','pointsAccepted','acceptanceRatio','testCases','automatedTestCases','pctTestsAutomated','pointsAdded','daysBlocked','blockerResolution','defectsClosed'],
+             fields: Ext.Object.getKeys(newData[0]),
              data: newData,
-             pageSize: data.length
+             pageSize: newData.length
           });
 
         return Ext.widget({
@@ -248,74 +328,64 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
           features: [{
             ftype: 'summary'
           }],
-          columnCfgs: this._getSummaryColumnCfgs(data),
+          columnCfgs: this._getSummaryColumnCfgs(newData),
           showPagingToolbar: false,
           showRowActionsColumn: false
         });
     },
     _addTeamGrid: function(data, project){
-
+      this.logger.log('_addTeamGrid', data);
       var fields = Ext.Object.getKeys(data[0]),
           store = Ext.create('Rally.data.custom.Store',{
-             //fields: fields,
+             fields: fields,
              data: data,
              pageSize: data.length
           });
-
+          this.logger.log('_addTeamGrid 2', fields);
         return Ext.widget({
           xtype:'rallygrid',
           store: store,
           title: project,
           margin: '15 0 25 0',
-
-          //height: 300,
-        //  flex: 1,
           columnCfgs: this._getColumnCfgs(data),
           showPagingToolbar: false,
           showRowActionsColumn: false
         });
     },
-    _addGroupedTeamGrid: function(data){
-      var fields = Ext.Object.getKeys(data[0]),
-          store = Ext.create('Rally.data.custom.Store',{
-             //fields: fields,
-             data: data,
-             pageSize: data.length,
-             groupField: 'project'
-          });
 
-
-        return Ext.widget({
-          xtype:'rallygrid',
-          store: store,
-          //title: project,
-          features: {ftype: 'grouping'},
-          //height: 300,
-          columnCfgs: this._getColumnCfgs(data),
-          groupHeaderTpl: '{name}',
-          showPagingToolbar: false,
-          showRowActionsColumn: false
-        });
-    },
     _getColumnCfgs: function(data){
         var cols = [{
            dataIndex: 'name',
            text: 'Metric',
            flex: 1
         }];
-
+        this.logger.log('_getColumnCfgs', data);
         _.each(Ext.Object.getKeys(data[0]),function(key){
-           if (key !== 'name' && key !== 'total' && key !== 'project'){
+           if (key !== 'name' && key !== 'total' && key !== 'project' && key !== 'isPercent'){
              cols.push({
                dataIndex: key,
-               text: key
+               text: key,
+               renderer: function(v,m,r){
+                  if (r.get('isPercent') == true){
+                      return Math.round(v*100) + '%';
+                      //return Ext.String.format('<div class="app-summary">{0}</div>', value);
+                  }
+                  return v;
+               }
              });
            }
         });
 
         cols.push({
           dataIndex: 'total',
-          text: 'Total'
+          text: 'Total',
+          renderer: function(v,m,r){
+             if (r.get('isPercent') == true ){
+                 return Math.round(v*100) + '%';
+                 //return Ext.String.format('<div class="app-summary">{0}</div>', value);
+             }
+             return v;
+          }
         });
 
         return cols;
@@ -344,18 +414,18 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
               return Math.round(v*100) + '%';
            },
            summaryType: 'average'
-        },{
-          dataIndex: 'testCases',
-          text: '# Test Cases',
-          summaryType: 'sum'
-        },{
-          dataIndex: 'automatedTestCases',
-          text: '# Automated Test Cases',
-          summaryType: 'sum'
-        },{
-          dataIndex: 'pctTestsAutomated',
-          text: '% Tests Automated',
-          summaryType: 'average'
+        // },{
+        //   dataIndex: 'testCases',
+        //   text: '# Test Cases',
+        //   summaryType: 'sum'
+        // // },{
+        //   dataIndex: 'automatedTestCases',
+        //   text: '# Automated Test Cases',
+        //   summaryType: 'sum'
+        // },{
+        //   dataIndex: 'pctTestsAutomated',
+        //   text: '% Tests Automated',
+        //   summaryType: 'average'
         },{
            dataIndex: 'daysBlocked',
            text: 'Days Blocked',
@@ -399,16 +469,41 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         }
         return null;
     },
+    getdaysOffsetFromIterationStart: function(){
+        return this.getSetting('daysOffsetFromIterationStart');
+    },
+    getDefectTag: function(){
+      return this.getSetting('defectTag');
+    },
+    getDaysOffsetFromPIStart: function(){
+       return this.getSetting('daysOffsetFromPIStart');
+    },
     getSettingsFields: function() {
-        var check_box_margins = '5 0 5 0';
         return [{
-            name: 'saveLog',
-            xtype: 'rallycheckboxfield',
-            boxLabelAlign: 'after',
-            fieldLabel: '',
-            margin: check_box_margins,
-            boxLabel: 'Save Logging<br/><span style="color:#999999;"><i>Save last 100 lines of log for debugging.</i></span>'
-
+           name: 'daysOffsetFromIterationStart',
+           xtype: 'rallynumberfield',
+           minValue: 0,
+           maxValue: 30,
+           fieldLabel: 'Days Offset From Iteration Start',
+           labelAlign: 'right',
+           margin: 10,
+           labelWidth: 200
+        },{
+          name: 'daysOffsetFromPIStart',
+          xtype: 'rallynumberfield',
+          minValue: 0,
+          maxValue: 30,
+          fieldLabel: 'Days Offset From PI Start',
+          labelAlign: 'right',
+          margin: 10,
+          labelWidth: 200
+        },{
+         name: 'defectTag',
+           xtype: 'rallytagpicker',
+           fieldLabel: 'Defect Tag',
+           labelAlign: 'right',
+           labelWidth: 200,
+           margin: '10 10 200 10'
         }];
     },
 
