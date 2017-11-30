@@ -1,4 +1,6 @@
 Ext.define('CArABU.app.utils.teamMetricsCalculator',{
+   precision: 2,
+
    constructor: function(config){
       this.project = config.project || {};
 
@@ -21,6 +23,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          //console.log('tags',this.defectTags.join(','))
       }
 
+      this._clearData();
 
    },
    getProjectName: function(){
@@ -29,11 +32,14 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
    setDaysOffsetFromIterationStart: function(daysOffset){
       if (daysOffset != this.daysOffsetFromIterationStart){
         this.daysOffsetFromIterationStart = daysOffset;
-        this.calculatedData = {};
+        this._clearData();
       }
    },
    setDaysOffsetFromPIStart: function(daysOffset){
-
+     if (daysOffset != this.daysOffsetFromPIStart){
+       this.daysOffsetFromPIStart = daysOffset;
+       this._clearData();
+     }
    },
    _calculate: function(iterationName){
      var iteration = this.iterationByName[iterationName],
@@ -51,10 +57,11 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
      if (!iteration){ this.calculatedData[iterationName] = {}; }
 
+     console.log('before pipoffsetdate', iteration, this.release, this.daysOffsetFromPIStart);
      var offsetDate = Rally.util.DateTime.add(iteration.StartDate, 'day', daysOffsetFromIterationStart),
          iterationEndDate = iteration.EndDate,
          pipOffsetDate = Rally.util.DateTime.add(this.release.ReleaseStartDate, 'day', this.daysOffsetFromPIStart);;
-
+    console.log('pipoffsetdate')
      var snaps = this.snapshotsByIterationOid[iteration.ObjectID] || [],
          blockedDurations = {};
 
@@ -191,17 +198,21 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
    },
    getData: function(){
 
+      if (this.data){
+         return this.data;
+      }
+
       var avgBlockerResolutionIdx = 0,
       acceptanceRatioIdx = 0,
-      plannedPoints = {name:'Planned Points', total: 0, project: this.project.Name, isPercent: false},
-      acceptedPoints = {name:'Accepted Points', total: 0, project: this.project.Name, isPercent: false},
-      acceptanceRatio = {name:'Acceptance Ratio', total: 0, project: this.project.Name, isPercent: true},
-      pointsAfterCommitment = {name:'Points After Commitment', total: 0, project: this.project.Name, isPercent: false},
-      daysBlocked = {name:'Days Blocked', total: 0, project: this.project.Name, isPercent: false},
-      avgBlockerResolution = {name:'Average Blocker Resolution', total: 0, project: this.project.Name, isPercent: false},
-      defectsClosedByTag = {name:'Defects Closed', total: 0, project: this.project.Name, isPercent: false},
-      piVelocityPlanned = {name:'PIP Velocity', total: 0, project: this.project.Name, isPercent: false},
-      piLoadPlanned = {name:'PIP Load', total: 0, project: this.project.Name, isPercent: false};
+      plannedPoints = {name:'Planned Points', total: 0, project: this.project.Name, isPercent: false, key: 'plannedPoints'},
+      acceptedPoints = {name:'Accepted Points', total: 0, project: this.project.Name, isPercent: false, key: 'acceptedPoints'},
+      acceptanceRatio = {name:'Acceptance Ratio', total: 0, project: this.project.Name, isPercent: true, key: 'acceptanceRatio'},
+      pointsAfterCommitment = {name:'Points After Commitment', total: 0, project: this.project.Name, isPercent: false, key: 'pointsAfterCommitment'},
+      daysBlocked = {name:'Days Blocked', total: 0, project: this.project.Name, isPercent: false, key: 'daysBlocked'},
+      avgBlockerResolution = {name:'Average Blocker Resolution', total: 0, project: this.project.Name, isPercent: false, key: 'avgBlockerResolution'},
+      defectsClosedByTag = {name:'Defects Closed', total: 0, project: this.project.Name, isPercent: false, key: 'defectsClosedByTag'},
+      piVelocityPlanned = {name:'PIP Velocity', total: 0, project: this.project.Name, isPercent: false, key: 'piVelocityPlanned'},
+      piLoadPlanned = {name:'PIP Load', total: 0, project: this.project.Name, isPercent: false, key: 'piLoadPlanned'};
       var idx = 0;
         Ext.Object.each(this.iterationByName, function(key,i){
            var dataIndex = key.toString();
@@ -233,7 +244,10 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
            defectsClosedByTag.total += defectsClosedByTag[dataIndex];
 
            piVelocityPlanned[dataIndex] = this.getPIPVelocityPlanned(key);
+           piVelocityPlanned.total += piVelocityPlanned[dataIndex];
+
            piLoadPlanned[dataIndex] = this.getPIPLoadPlanned(key);
+           piLoadPlanned.total += piLoadPlanned[dataIndex];
 
         },this);
 
@@ -254,14 +268,39 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
         return this.data;
    },
-   getPlannedPointsTotal: function(){
+   _getTotal: function(key){
+     var data = this.getData();
+     var obj = _.find(data,function(d){ return d.key == key; });
+     return obj && obj.total;
    },
-   getAcceptedPointsTotal: function(){},
-   getAcceptanceRatioTotal: function(){},
-   getPointsAfterCommitmentTotal: function(){},
-   getDaysBlockedTotal: function(){},
-   getBlockerResolutionTotal: function(){},
-   getDefectsClosedTotal: function(){},
+   getPlannedPointsTotal: function(){
+     return this._getTotal('plannedPoints');
+   },
+   getAcceptedPointsTotal: function(){
+     return this._getTotal('acceptedPoints');
+   },
+   getAcceptanceRatioTotal: function(){
+     return this._getTotal('acceptanceRatio');
+   },
+   getPointsAfterCommitmentTotal: function(){
+      return this._getTotal('pointsAfterCommitment');
+   },
+   getDaysBlockedTotal: function(){
+     return this._getTotal('daysBlocked');
+   },
+   getBlockerResolutionTotal: function(){
+     return this._getTotal('avgBlockerResolution');
+   },
+   getDefectsClosedTotal: function(){
+     return this._getTotal('defectsClosedByTag');
+   },
+   getPIPlanVelocityTotal: function(){
+     return this._getTotal('piVelocityPlanned');
+   },
+   getPIPlanLoadTotal: function(){
+     return this._getTotal('piLoadPlanned');
+   },
+
    getPlannedPoints: function(iterationName){
       if (!this.calculatedData[iterationName]){
          this._calculate(iterationName);
@@ -429,6 +468,10 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
       });
       return plannedVelocities;
 
+   },
+   _clearData: function(){
+     this.data = null;
+     this.calculatedData = {};
    }
 
 });

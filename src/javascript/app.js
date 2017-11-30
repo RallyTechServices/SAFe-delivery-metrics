@@ -18,9 +18,12 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       defaultSettings: {
         daysOffsetFromIterationStart: 0,
         defectTag: null,
-        daysOffsetFromPIStart: 0
+        daysOffsetFromPIStart: 0,
+        precision: 2
       }
     },
+
+    releaseFetchList: ['ObjectID','Project','Name','ReleaseStartDate'],
 
     launch: function() {
       this.logger.log('this.', this._hasScope())
@@ -74,7 +77,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         Ext.create('Rally.data.wsapi.Store',{
            model: 'Release',
            filters: filters,
-           fetch: ['ObjectID','Project','Name'],
+           fetch: this.releaseFetchList,
            limit: 'Infinity',
            pageSize: 2000
         }).load({
@@ -231,6 +234,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
           calcs.push(calc);
       }, this);
 
+
       this.add({
         xtype:'panel',
         height: items.length * 400,
@@ -239,6 +243,15 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         flex: 1,
         itemId: 'teamDetail',
         tools:[{
+            type: 'export',
+            tooltip: 'Export Data',
+            renderTpl: [
+              '<div class="control icon-export" style="margin-right:20px"></div>'
+            ],
+            width: 35,
+             handler: this._exportTeams,
+             scope: this
+        },{
           type:'close',
           tooltip: 'Close Panel',
           renderTpl: [
@@ -249,7 +262,6 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
          },
          width: 35,
           handler: function(event, toolEl, panelHeader) {
-            console.log('huh')
             this.down('#teamDetail').collapse();
           },
           scope: this
@@ -275,16 +287,22 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         flex: 1,
         itemId: 'summary',
         tools:[{
-          type:'close',
+            type: 'export',
+            tooltip: 'Export Data',
+            renderTpl: [
+              '<div class="control icon-export" style="margin-right:20px"></div>'
+            ],
+            width: 35,
+             handler: this._exportSummary,
+             scope: this
+        },{
           tooltip: 'Close Panel',
           renderTpl: [
             '<div class="control icon-chevron-down" style="margin-right:20px"></div>'
           ],
-         renderSelectors: {
-             toolEl: '.icon-chevron-down'
-         },
          width: 35,
-          handler: function(event, toolEl, panelHeader) {
+          handler: function(evt, toolEl, panelHeader, toolObj) {
+            console.log('handler',evt,toolEl,panelHeader,toolObj);
             this.down('#summary').collapse();
           },
           scope: this
@@ -299,19 +317,62 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       });
 
     },
+    _exportTeams: function(){
+      this.logger.log('_exportTeams');
+      var grids = this.down('#teamDetail').query('rallygrid'),
+          csv = [];
+      _.each(grids, function(grid){
+          var cols = grid.getColumnCfgs();
+          var headers = ['Team'].concat(_.pluck(cols,'text'));
+          csv.push('"' + headers.join('","') + '"');
+          grid.getStore().each(function(r){
+              var row = [grid.title];
+              _.each(cols, function(c){
+                 row.push(r.get(c.dataIndex));
+              });
+              csv.push(row.join(','));
+          });
+          csv.push("");
+      });
+      var fileName = Ext.String.format('team-detail-{0}.csv', Rally.util.DateTime.format(new Date(),'Y-m-d-h-i-s'));
+      TSUtilities.saveCSVToFile(csv.join('\r\n'),fileName);
+    },
+    _exportSummary: function(){
+      this.logger.log('_exportSummary');
+      var grid = this.down('#summary').query('rallygrid'),
+          csv = [];
+
+      if (grid && grid.length > 0){
+         grid = grid[0];
+         var cols = grid.getColumnCfgs();
+         var headers = _.pluck(cols,'text');
+         csv.push('"' + headers.join('","') + '"');
+
+         grid.getStore().each(function(r){
+             var row = _.map(cols, function(c){
+                return r.get(c.dataIndex);
+             });
+             csv.push(row.join(','));
+         });
+         var fileName = Ext.String.format('summary-{0}.csv', Rally.util.DateTime.format(new Date(),'Y-m-d-h-i-s'));
+         TSUtilities.saveCSVToFile(csv.join('\r\n'),fileName);
+      }
+    },
     _getSummaryGrid: function(calcs){
       var newData = [];
       _.each(calcs, function(c){
          var project = c.project;
          newData.push({
-           project: project,
+           project: project.Name,
            pointsPlanned: c.getPlannedPointsTotal(),
            pointsAccepted: c.getAcceptedPointsTotal(),
            acceptanceRatio: c.getAcceptanceRatioTotal(),
            pointsAdded: c.getPointsAfterCommitmentTotal(),
            daysBlocked: c.getDaysBlockedTotal(),
            blockerResolution: c.getBlockerResolutionTotal(),
-           defectsClosed: c.getDefectsClosedTotal()
+           defectsClosed: c.getDefectsClosedTotal(),
+           piPlanVelocity: c.getPIPlanVelocityTotal(),
+           piPlanLoad: c.getPIPlanLoadTotal()
          });
       });
       this.logger.log('data',newData);
@@ -341,7 +402,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
              data: data,
              pageSize: data.length
           });
-          this.logger.log('_addTeamGrid 2', fields);
+
         return Ext.widget({
           xtype:'rallygrid',
           store: store,
@@ -359,36 +420,35 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            text: 'Metric',
            flex: 1
         }];
+        var excludedKeys = ['name','key','project','total','isPercent'];
         this.logger.log('_getColumnCfgs', data);
         _.each(Ext.Object.getKeys(data[0]),function(key){
-           if (key !== 'name' && key !== 'total' && key !== 'project' && key !== 'isPercent'){
+           if (!Ext.Array.contains(excludedKeys,key)){
              cols.push({
                dataIndex: key,
                text: key,
-               renderer: function(v,m,r){
-                  if (r.get('isPercent') == true){
-                      return Math.round(v*100) + '%';
-                      //return Ext.String.format('<div class="app-summary">{0}</div>', value);
-                  }
-                  return v;
-               }
+               renderer: this._numberRenderer
              });
            }
-        });
-
+        }, this);
         cols.push({
           dataIndex: 'total',
           text: 'Total',
-          renderer: function(v,m,r){
-             if (r.get('isPercent') == true ){
-                 return Math.round(v*100) + '%';
-                 //return Ext.String.format('<div class="app-summary">{0}</div>', value);
-             }
-             return v;
-          }
+          renderer: this._numberRenderer
         });
 
         return cols;
+    },
+
+    _numberRenderer: function(v,m,r){
+        if (r.get('isPercent') === true ){
+            return Math.round(v*100) + '%';
+        }
+
+       if (!isNaN(v) && v % 1 !== 0){
+          return v.toFixed(2);
+       }
+       return v;
     },
     _getSummaryColumnCfgs: function(data){
         var cols = [{
@@ -414,18 +474,6 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
               return Math.round(v*100) + '%';
            },
            summaryType: 'average'
-        // },{
-        //   dataIndex: 'testCases',
-        //   text: '# Test Cases',
-        //   summaryType: 'sum'
-        // // },{
-        //   dataIndex: 'automatedTestCases',
-        //   text: '# Automated Test Cases',
-        //   summaryType: 'sum'
-        // },{
-        //   dataIndex: 'pctTestsAutomated',
-        //   text: '% Tests Automated',
-        //   summaryType: 'average'
         },{
            dataIndex: 'daysBlocked',
            text: 'Days Blocked',
@@ -433,13 +481,21 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         },{
            dataIndex: 'blockerResolution',
            text: 'Average Days to Resolve Blockers',
-           summaryType: 'sum'
+           summaryType: 'average',
+           renderer: this._numberRenderer
         },{
           dataIndex: 'defectsClosed',
           text: 'Total number of SIs Closed',
           summaryType: 'sum'
+        },{
+          dataIndex: 'piPlanVelocity',
+          text: 'Total PI Plan Velocity',
+          summaryType: 'sum'
+        },{
+          dataIndex: 'piPlanLoad',
+          text: 'Total PI Plan Load',
+          summaryType: 'sum'
         }];
-
         return cols;
     },
     _addAppMessage: function(msg){
