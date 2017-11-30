@@ -32,7 +32,10 @@ Ext.define('mockSnapshot',{
       {name:'_ValidTo',type:'auto'},
       {name:'Iteration',type:'int'},
       {name:'AcceptedDate',type:'auto'},
-      {name:'Project',type:'int'},
+      {name:'Project',type:'auto'},
+      {name:'Blocked'},
+      {name:'Tags',type:'auto'},
+      {name:'_TypeHierarchy',type:'auto'}
   ]
 });
 
@@ -44,7 +47,21 @@ Ext.define('mockIteration',{
         {name:'StartDate',type:'auto'},
         {name:'EndDate',type:'auto'},
         {name:'id',type:'int',convert:useObjectID},
-        {name:'Project',type:'auto'}
+        {name:'Project',type:'auto'},
+        {name:'RevisionHistory',type:'auto'},
+        {name:'PlannedVelocity',type:'auto'},
+        {name:'CreationDate',type:'auto'}
+    ]
+});
+
+Ext.define('mockIterationRevision',{
+    extend: 'Ext.data.Model',
+    fields: [
+        {name:'ObjectID', type: 'int'},
+        {name:'RevisionHistory',type:'auto'},
+        {name:'Description',type:'string'},
+        {name:'CreationDate',type:'auto'},
+        {name:'id',type:'int',convert:useObjectID}
     ]
 });
 
