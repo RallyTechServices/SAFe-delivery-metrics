@@ -199,7 +199,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            "Iteration": {$in: timeboxOids},
            "_ValidTo": {$gte: earliestDate},
            "_ValidFrom": {$lte: latestDate},
-           "_ProjectHierarchy": this.getContext().getProject().ObjectID //This probably isn't needed since the iterations are specified 
+           "_ProjectHierarchy": this.getContext().getProject().ObjectID //This probably isn't needed since the iterations are specified
           },
           hydrate: ['_TypeHierarchy','Project'],
           limit: 'Infinity',
@@ -223,7 +223,11 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       var items = [],
           newData = [],
           calcs = [];
-      _.each(data.releases, function(r){
+
+      var releases = _.sortBy(data.releases, function(r){
+         return r.get('Project').Name;
+      });
+      _.each(releases, function(r){
           var project = r.get('Project');
           var calc = Ext.create('CArABU.app.utils.teamMetricsCalculator',{
              project: project,
@@ -423,7 +427,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         var cols = [{
            dataIndex: 'name',
            text: 'Metric',
-           flex: 1
+           flex: 2
         }];
         var excludedKeys = ['name','key','project','total','isPercent'];
         this.logger.log('_getColumnCfgs', data);
@@ -432,14 +436,16 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
              cols.push({
                dataIndex: key,
                text: key,
-               renderer: this._numberRenderer
+               renderer: this._numberRenderer,
+               flex: 1
              });
            }
         }, this);
         cols.push({
           dataIndex: 'total',
           text: 'Total',
-          renderer: this._numberRenderer
+          renderer: this._numberRenderer,
+          flex: 1
         });
 
         return cols;
