@@ -561,6 +561,8 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
        return this.getSetting('daysOffsetFromPIStart');
     },
     getSettingsFields: function() {
+        var defectTags = this.getSetting('defectTag');
+        this.logger.log('defectTags', defectTags);
         return [{
            name: 'daysOffsetFromIterationStart',
            xtype: 'rallynumberfield',
@@ -580,14 +582,12 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
           margin: 10,
           labelWidth: 200
         },{
-         name: 'defectTag',
-           xtype: 'rallytagpicker',
-           fieldLabel: 'Defect Tag',
-           labelAlign: 'right',
-           enableAddNew: false,
-           labelWidth: 200,
-           remoteFilter: true,
-           margin: '10 10 200 10'
+           name: 'defectTag',
+           xtype: 'enhancedtagselector',
+           fieldLabel: '',
+           value: this.getSetting('defectTag'),
+           width: '100%',
+
         }];
     },
 

@@ -22,7 +22,6 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          });
          //console.log('tags',this.defectTags.join(','))
       }
-      console.log('-- defect tags', this.defectTags);
       this._clearData();
 
    },
@@ -132,7 +131,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
           arr = arr.concat(obj.durations);
           return arr;
      },[]);
-     console.log('-- data', iterationName, data, allBlockedDurations);
+
      data.blockedDays = Ext.Array.sum(allBlockedDurations);
      data.averageBlockedResolutionTime = Ext.Array.mean(allBlockedDurations);
      data.blockedDurations = allBlockedDurations;
@@ -359,7 +358,6 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      if (!this.calculatedData[iterationName]){
         this._calculate(iterationName);
      }
-     console.log('--defectsClosed',this.project.Name, iterationName, this.calculatedData[iterationName].defectsClosed );
      return this.calculatedData[iterationName].defectsClosed || 0;
    },
    getPIPVelocityPlanned: function(iterationName){
