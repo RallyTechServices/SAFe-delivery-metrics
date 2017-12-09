@@ -4,13 +4,6 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
     logger: new CArABU.technicalservices.Logger(),
     defaults: { margin: 10 },
 
-    layout: {
-    // layout-specific configs go here
-      type: 'accordion',
-      titleCollapse: false,
-      animate: true,
-      activeOnTop: true
-    },
     integrationHeaders : {
         name : "CArABU.app.TSApp"
     },
@@ -26,7 +19,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
     releaseFetchList: ['ObjectID','Project','Name','ReleaseStartDate','Children'],
 
     launch: function() {
-      this.logger.log('this.', this._hasScope())
+      this.logger.log('this.', this._hasScope(), this.getSettings());
       if (!this._hasScope()){
         this._addAppMessage("This app is designed to run on a Release scoped dashboard.<br/><br/>Please select <em>Edit Page...</em> from the Page Settings and set the <em>Show Filter</em> setting to Release.");
         return;
@@ -236,6 +229,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
              snapshots: data.snapshots,
              iterationRevisions: data.iterationRevisions,
              daysOffsetFromIterationStart: this.getdaysOffsetFromIterationStart(),
+             daysOffsetFromPIStart: this.getDaysOffsetFromPIStart(),
              defectTag: this.getDefectTag()
           });
 
@@ -244,91 +238,105 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
           calcs.push(calc);
       }, this);
 
-
       this.add({
-        xtype:'panel',
-        height: items.length * 400,
-        autoScroll: true,
-        cls: 'fieldBucket',
-        flex: 1,
-        itemId: 'teamDetail',
-        tools:[{
-            type: 'export',
-            tooltip: 'Export Data',
-            renderTpl: [
-              '<div class="control icon-export" style="margin-right:20px"></div>'
-            ],
-            width: 35,
-             handler: this._exportTeams,
-             scope: this
-        },{
-          type:'close',
-          tooltip: 'Collapse panel to see Summary data',
-          renderTpl: [
-            '<div class="control icon-chevron-down" style="margin-right:20px"></div>'
-          ],
-         renderSelectors: {
-             toolEl: '.icon-chevron-down'
+         xtype: 'container',
+         layout: {
+           type:'hbox',
+           pack: 'end'
          },
-         width: 35,
-          handler: function(event, toolEl, panelHeader) {
-            this.down('#teamDetail').collapse();
-          },
-          scope: this
-        }],
-        hideCollapseTool: true,
-        padding: '8px 0 0 0',
-        bodyPadding: '7px 5px 5px 5px',
-        collapseDirection: 'top',
-        collapsible: true,
-        animCollapse: false,
-
-        items: items,
-        title: 'Teams',
+         items: [{
+           xtype: 'rallybutton',
+           iconCls: 'icon-export',
+           cls: 'secondary rly-small',
+           handler: this._export,
+           scope: this
+         },{
+           xtype: 'rallybutton',
+           text: 'Teams',
+           itemId: 'teamsBtn',
+           margin: '0 0 0 25',
+           pressed: true,
+           cls: 'primary rly-small',
+           toggleGroup: 'tabView',
+           toggleHandler: this._tabChange,
+           style: {
+              borderBottomRightRadius: 0,
+              borderTopRightRadius: 0
+           },
+           scope: this
+         },{
+           xtype: 'rallybutton',
+           text: 'Summary',
+           itemId: 'summaryBtn',
+           margin: '0 25 0 0',
+           cls: 'secondary rly-small',
+           toggleGroup: 'tabView',
+           style: {
+              borderBottomLeftRadius: 0,
+              borderTopLeftRadius: 0
+           },
+           toggleHandler: this._tabChange,
+           scope: this
+         }]
       });
 
-      this.add({
-        xtype:'panel',
-        height: 600,
-        autoScroll: true,
-        title: "Summary",
-        //autoScroll: true,
-        cls: 'fieldBucket',
-        flex: 1,
-        itemId: 'summary',
-        tools:[{
-            type: 'export',
-            tooltip: 'Export Data',
-            renderTpl: [
-              '<div class="control icon-export" style="margin-right:20px"></div>'
-            ],
-            width: 35,
-             handler: this._exportSummary,
-             scope: this
-        },{
-          tooltip: 'Collapse panel to see team detail data',
-          renderTpl: [
-            '<div class="control icon-chevron-down" style="margin-right:20px"></div>'
-          ],
-         width: 35,
-          handler: function(evt, toolEl, panelHeader, toolObj) {
-            this.down('#summary').collapse();
+      var tabs = Ext.create('Ext.tab.Panel', {
+          layout: 'fit',
+          overflowX: 'hidden',
+          overflowY: 'hidden',
+          activeTab: 0,
+          itemId: 'tabs',
+          tabBar: {
+             hidden: true
           },
-          scope: this
-        }],
-        hideCollapseTool: true,
-        padding: '8px 0 0 0',
-        bodyPadding: '7px 5px 5px 5px',
-        collapseDirection: 'top',
-        collapsible: true,
-        animCollapse: false,
-        items: [this._getSummaryGrid(calcs)]
+          border: false,
+          items: [
+              {
+                  xtype : 'panel',
+                  overflowY: 'hidden',
+                  border: false,
+                  cls: 'fieldBucket',
+                  itemId: 'teamsTab',
+                  padding: '8px 0 0 0',
+                  items: items,
+                  title: 'Teams',
+              },{
+                  xtype:'panel',
+                  overflowY: 'hidden',
+                  title: "Summary",
+                  border: false,
+                  cls: 'fieldBucket',
+                   itemId: 'summaryTab',
+                   padding: '8px 0 0 0',
+                   items: [this._getSummaryGrid(calcs)]
+              }
+          ]
       });
+      this.add(tabs);
 
+    },
+    _tabChange: function(btn, pressed){
+       this.logger.log('_tabChange',btn, pressed);
+       if (pressed){
+         btn.addCls('primary');
+         btn.removeCls('secondary');
+         this.down('#tabs').setActiveTab(btn.itemId.replace('Btn','Tab'));
+       } else {
+         btn.addCls('secondary');
+         btn.removeCls('primary');
+       }
+    },
+    _export: function(){
+        var activeTab = this.down('#tabs').getActiveTab().itemId;
+        if (activeTab === 'teamsTab'){
+           this._exportTeams();
+        } else {
+           this._exportSummary();
+        }
     },
     _exportTeams: function(){
       this.logger.log('_exportTeams');
-      var grids = this.down('#teamDetail').query('rallygrid'),
+      var grids = this.down('#teamsTab').query('rallygrid'),
           csv = [];
       _.each(grids, function(grid){
           var cols = grid.getColumnCfgs();
@@ -348,7 +356,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
     },
     _exportSummary: function(){
       this.logger.log('_exportSummary');
-      var grid = this.down('#summary').query('rallygrid'),
+      var grid = this.down('#summaryTab').query('rallygrid'),
           csv = [];
 
       if (grid && grid.length > 0){
@@ -400,7 +408,8 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
           }],
           columnCfgs: this._getSummaryColumnCfgs(newData),
           showPagingToolbar: false,
-          showRowActionsColumn: false
+          showRowActionsColumn: false,
+          margin: '25 0 25 0'
         });
     },
     _addTeamGrid: function(data, project){
@@ -468,7 +477,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            flex: 1,
            summaryType: 'count',
            summaryRenderer: function(value, summaryData, dataIndex) {
-            return Ext.String.format('<div class="app-summary">{0} Team{1} Total</div>', value, value !== 1 ? 's' : '');
+              return Ext.String.format('<div class="app-summary">{0} Team{1} Total</div>', value, value !== 1 ? 's' : '');
           }
         },{
            dataIndex: 'pointsPlanned',
@@ -481,10 +490,16 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         },{
            dataIndex: 'acceptanceRatio',
            text: 'Point Acceptance Rate',
-           renderer: function(v){
+           renderer: function(v, m, r){
               return Math.round(v*100) + '%';
            },
-           summaryType: 'average'
+           summaryType: 'average',
+           summaryRenderer: function(value, el, summaryData, dataIndex) {
+             if (summaryData.data.pointsPlanned > 0 && summaryData.data.pointsAccepted > 0){
+                return Math.round(summaryData.data.pointsAccepted/summaryData.data.pointsPlanned * 100) + '%';
+             }
+             return '--';
+           }
         },{
            dataIndex: 'daysBlocked',
            text: 'Days Blocked',
@@ -569,7 +584,9 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            xtype: 'rallytagpicker',
            fieldLabel: 'Defect Tag',
            labelAlign: 'right',
+           enableAddNew: false,
            labelWidth: 200,
+           remoteFilter: true,
            margin: '10 10 200 10'
         }];
     },

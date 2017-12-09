@@ -22,7 +22,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          });
          //console.log('tags',this.defectTags.join(','))
       }
-
+      console.log('-- defect tags', this.defectTags);
       this._clearData();
 
    },
@@ -63,6 +63,8 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      var snaps = this.snapshotsByIterationOid[iteration.ObjectID] || [],
          blockedDurations = {};
 
+    var defects = [];
+
      for (var i=0; i<snaps.length; i++){
        var snap = snaps[i],
          validFrom = Rally.util.DateTime.fromIsoString(snap._ValidFrom),
@@ -87,7 +89,6 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
          if (snap.Blocked){
             var blockedDuration = this._getBlockedDuration(snap, iteration);
-          //  console.log('blockedDuration', blockedDuration);
             if (blockedDuration > 0){
               if (!blockedDurations[snap.ObjectID]){
                   blockedDurations[snap.ObjectID] = {
@@ -114,20 +115,27 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
         }
       }
 
-      if (type=='Defect' && snap.Tags && snap.AcceptedDate){
-          if (_.intersection(snap.Tags, this.defectTags).length > 0){
+    if (type=='Defect' && snap.Tags && _.intersection(snap.Tags, this.defectTags).length > 0){
+          if (snap.AcceptedDate && !Ext.Array.contains(defects, snap.ObjectID)){
               data.defectsClosed++;
+              defects.push(snap.ObjectID);
+          } else if (!snap.AcceptedDate && Ext.Array.contains(defects, snap.ObjectID)){
+            //remove the defect from the closed defects
+            data.defectsClosed--;
+            defects = Ext.Array.remove(defects,snap.ObjectID);
           }
       }
+
     } //for
 
      var allBlockedDurations = _.reduce(blockedDurations, function(arr, obj, key){
           arr = arr.concat(obj.durations);
           return arr;
      },[]);
-
+     console.log('-- data', iterationName, data, allBlockedDurations);
      data.blockedDays = Ext.Array.sum(allBlockedDurations);
      data.averageBlockedResolutionTime = Ext.Array.mean(allBlockedDurations);
+     data.blockedDurations = allBlockedDurations;
 
      data.piPlanVelocity = this._calculatePIPlanVelocity(iteration, this.daysOffsetFromPIStart, this.release);
      this.calculatedData[iterationName] = data;
@@ -192,7 +200,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
              var next_day = Rally.util.DateTime.add(date_chit,"day",1);
              date_chit = next_day;
            }
-          return counter-1;
+          return counter;
    },
    getData: function(){
 
@@ -201,6 +209,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
       }
 
       var avgBlockerResolutionIdx = 0,
+      totalBlockedDurations = [],
       acceptanceRatioIdx = 0,
       plannedPoints = {name:'Planned Points', total: 0, project: this.project.Name, isPercent: false, key: 'plannedPoints'},
       acceptedPoints = {name:'Accepted Points', total: 0, project: this.project.Name, isPercent: false, key: 'acceptedPoints'},
@@ -247,10 +256,12 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
            piLoadPlanned[dataIndex] = this.getPIPLoadPlanned(key);
            piLoadPlanned.total += piLoadPlanned[dataIndex];
 
+           totalBlockedDurations = totalBlockedDurations.concat(this.getBlockedDurations(key));
+
         },this);
 
-        avgBlockerResolution.total = avgBlockerResolutionIdx > 0 ? avgBlockerResolution.total/avgBlockerResolutionIdx: 0;
-        acceptanceRatio.total = acceptanceRatioIdx > 0 ? acceptanceRatio.total/acceptanceRatioIdx : 0;
+        avgBlockerResolution.total = Ext.Array.mean(totalBlockedDurations); //avgBlockerResolutionIdx > 0 ? avgBlockerResolution.total/avgBlockerResolutionIdx: 0;
+        acceptanceRatio.total = acceptedPoints.total > 0 ? acceptedPoints.total/plannedPoints.total : 0;
 
         this.data = [
           plannedPoints,
@@ -271,6 +282,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      var obj = _.find(data,function(d){ return d.key == key; });
      return obj && obj.total;
    },
+
    getPlannedPointsTotal: function(){
      return this._getTotal('plannedPoints');
    },
@@ -298,7 +310,12 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
    getPIPlanLoadTotal: function(){
      return this._getTotal('piLoadPlanned');
    },
-
+   getBlockedDurations: function(iterationName){
+      if (!this.calculatedData[iterationName]){
+         this._calculate(iterationName);
+      }
+      return this.calculatedData[iterationName].blockedDurations || 0;
+   },
    getPlannedPoints: function(iterationName){
       if (!this.calculatedData[iterationName]){
          this._calculate(iterationName);
@@ -342,6 +359,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      if (!this.calculatedData[iterationName]){
         this._calculate(iterationName);
      }
+     console.log('--defectsClosed',this.project.Name, iterationName, this.calculatedData[iterationName].defectsClosed );
      return this.calculatedData[iterationName].defectsClosed || 0;
    },
    getPIPVelocityPlanned: function(iterationName){
