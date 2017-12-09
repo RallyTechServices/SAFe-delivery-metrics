@@ -250,8 +250,8 @@ describe("Team Metrics Calculator", function() {
           hoursOffsetFromIterationStart: 0,
           release: release
       });
-      expect(calcA.getDaysBlocked('Iteration 1')).toBe(18.5);
-      expect(calcA.getAverageBlockerResolution('Iteration 1')).toBe(1.85);
+      expect(calcA.getDaysBlocked('Iteration 1')).toBe(26.5);
+      expect(calcA.getAverageBlockerResolution('Iteration 1')).toBe(2.65);
 
     });
 
@@ -302,7 +302,7 @@ describe("Team Metrics Calculator", function() {
 
       expect(calcA._getBlockedDuration({
           _ValidFrom: '2017-07-04T12:00:00Z',
-          _ValidTo: '2017-07-13T12:00:00Z' },iterationData)).toBe(6);
+          _ValidTo: '2017-07-13T12:00:00Z' },iterationData)).toBe(7);
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-06T12:00:00Z',
@@ -310,15 +310,15 @@ describe("Team Metrics Calculator", function() {
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-13T12:00:00Z',
-            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(3);
+            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(4);
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-04T12:00:00Z',
-            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(9);
+            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(10);
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-04T12:00:00Z',
-            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(9);
+            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(10);
 
 
     });
@@ -401,6 +401,60 @@ describe("Team Metrics Calculator", function() {
       });
       expect(calcA.getPIPLoadPlanned('Iteration 1')).toBe(10);
           //getPIPLoadPlanned
+    });
+
+    it ('should calculate the blocked duration as expected, using the desired formula',function(){
+      var calcA = Ext.create('CArABU.app.utils.teamMetricsCalculator',{
+          project: projectA,
+          iterations: [],
+          snapshots: [],
+          release: release
+      });
+
+      //Iteration dates: Wed 7-5-2017 through Tues 7-18-2017
+      var iterationData = { StartDate: new Date(2017,09,16,12,0,0), EndDate: new Date(2017,09,27,23,59,0)};
+
+      expect(calcA._getBlockedDuration({
+          _ValidFrom: '2017-10-18T17:02:00Z',
+          _ValidTo: '2017-10-19T16:06:00Z' },iterationData)).toBe(1);
+
+      expect(calcA._getBlockedDuration({
+            _ValidFrom: '2017-10-19T15:00:00Z',
+            _ValidTo: '2017-10-19T16:06:00Z'},iterationData)).toBe(0.125);
+
+      expect(calcA._getBlockedDuration({
+            _ValidFrom: '2017-10-19T17:27:00Z',
+            _ValidTo: '2017-10-23T12:35:00Z'},iterationData)).toBe(2);
+
+    });
+    it('should calculate the number of defects accepted for the iteration that have a particular tag associated with them when multiple snapshots for the defect exist', function() {
+      var snapshots = [
+        Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 1, Name: 'Defect A', AcceptedDate: null, Tags: [123,456], Iteration: 11, Project:projectA, _ValidFrom: '2017-07-04T12:00:43Z', _ValidTo: '2017-07-13T12:00:00Z' }),
+        Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 1, Name: 'Defect A', AcceptedDate: '2017-07-13T12:00:00Z', Tags: [123], Iteration: 11, Project:projectA, _ValidFrom: '2017-07-13T12:00:43Z', _ValidTo: '2017-08-15T12:00:00Z' }),
+        Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 1, Name: 'Defect A', AcceptedDate: '2017-07-13T12:00:00Z', Tags: [123], Iteration: 11, Project:projectA, _ValidFrom: '2017-07-15T12:00:00Z', _ValidTo: '2017-08-08T12:00:00Z' }),
+
+        Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 2, Name: 'Defect B', AcceptedDate: null, Tags: [124,456], Iteration: 11, Project:projectA, _ValidFrom: '2017-07-04T12:00:43Z', _ValidTo: '2017-07-13T12:00:00Z' }),
+        Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 2, Name: 'Defect B', AcceptedDate: '2017-07-13T12:00:00Z', Tags: [124], Iteration: 11, Project:projectA, _ValidFrom: '2017-07-13T12:00:43Z', _ValidTo: '2017-08-08T12:00:00Z' }),
+
+        Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 3, Name: 'Defect C', AcceptedDate: null, Tags: [123,456], Iteration: 21, Project:projectA, _ValidFrom: '2017-07-18T12:00:43Z', _ValidTo: '2017-07-21T12:00:00Z' }),
+        Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 3, Name: 'Defect C', AcceptedDate: '2017-07-21T12:00:00Z', Tags: [123], Iteration: 21, Project:projectA, _ValidFrom: '2017-07-21T12:00:43Z', _ValidTo: '2017-08-08T12:00:00Z' }),
+
+      ];
+
+
+
+      var calcA = Ext.create('CArABU.app.utils.teamMetricsCalculator',{
+          project: projectA,
+          iterations: iterations,
+          snapshots: snapshots,
+          hoursOffsetFromIterationStart: 0,
+          defectTag: '/tag/123,/tag/2333',
+          release: release
+      });
+      expect(calcA.getDefectsClosedByTag('Iteration 1')).toBe(1);
+      expect(calcA.getDefectsClosedByTag('Iteration 2')).toBe(1);
+      expect(calcA.getDefectsClosedByTag('Iteration 3')).toBe(0);
+
     });
 
 });
