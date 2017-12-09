@@ -66,3 +66,20 @@
 .x-accordion-item .x-accordion-hd {
   background-color: #f6f6f6;
 }
+
+.tag-btn {
+
+     background-color: #c4d8e8;
+     color: #222!important;
+     border-color: #c4d8e8;
+     font-family: ProximaNova,Helvetica,Arial;
+     font-size: 11px;
+}
+
+.tag-btn .x-btn-inner {
+   color: #222!important;
+}
+
+.app-settings .settings-form label {
+   vertical-align: top;
+}
