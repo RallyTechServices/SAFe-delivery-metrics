@@ -474,7 +474,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         var cols = [{
            dataIndex: 'project',
            text: 'Team',
-           flex: 1,
+           flex: 3,
            summaryType: 'count',
            summaryRenderer: function(value, summaryData, dataIndex) {
               return Ext.String.format('<div class="app-summary">{0} Team{1} Total</div>', value, value !== 1 ? 's' : '');
@@ -482,18 +482,27 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         },{
            dataIndex: 'pointsPlanned',
            text: 'Points Planned',
+           flex: 1,
            summaryType: 'sum'
         },{
            dataIndex: 'pointsAccepted',
            text: 'Points Accepted',
+           flex: 1,
+           summaryType: 'sum'
+        },{
+           dataIndex: 'pointsAdded',
+           text: 'Points Added after Commitment',
+           flex: 1,
            summaryType: 'sum'
         },{
            dataIndex: 'acceptanceRatio',
            text: 'Point Acceptance Rate',
+           flex: 1,
            renderer: function(v, m, r){
               return Math.round(v*100) + '%';
            },
            summaryType: 'average',
+           flex: 1,
            summaryRenderer: function(value, el, summaryData, dataIndex) {
              if (summaryData.data.pointsPlanned > 0 && summaryData.data.pointsAccepted > 0){
                 return Math.round(summaryData.data.pointsAccepted/summaryData.data.pointsPlanned * 100) + '%';
@@ -503,23 +512,28 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         },{
            dataIndex: 'daysBlocked',
            text: 'Days Blocked',
+           flex: 1,
            summaryType: 'sum'
         },{
            dataIndex: 'blockerResolution',
            text: 'Average Days to Resolve Blockers',
+           flex: 1,
            summaryType: 'average',
            renderer: this._numberRenderer
         },{
           dataIndex: 'defectsClosed',
-          text: 'Total number of SIs Closed',
+          text: 'Total number of Defects Closed',
+          flex: 1,
           summaryType: 'sum'
         },{
           dataIndex: 'piPlanVelocity',
           text: 'Total PI Plan Velocity',
+          flex: 1,
           summaryType: 'sum'
         },{
           dataIndex: 'piPlanLoad',
           text: 'Total PI Plan Load',
+          flex: 1,
           summaryType: 'sum'
         }];
         return cols;

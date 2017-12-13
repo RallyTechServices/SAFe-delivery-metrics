@@ -178,17 +178,28 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
            }
 
            if (validTo > iteration.EndDate && validFrom < iteration.EndDate){
-              validTo = iteration.EndDate;
+              if (iteration.EndDate < new Date()){
+                validTo = iteration.EndDate;
+              } else {
+                 validTo = new Date();
+              }
            }
            var diff = Rally.util.DateTime.getDifference(validTo,validFrom,'hour');
-           //If this wasn't blocked or unblocked on a weekend, then we want an increment of an 8-hour day
-           if (diff < 8){ //Then we want an increment of an 8-hour day
+         //If this wasn't blocked or unblocked on a weekend, then we want an increment of an 8-hour day
+           if (diff <= 8){ //Then we want an increment of an 8-hour day
                if ((validTo.getDay() > 0 && validTo.getDay() < 6) || (validFrom.getDay() > 0 && validFrom.getDay() < 6)){
                  return diff/8;
                }
                return 0;
            }
-
+           //console.log('validFrom',validFrom,validTo);
+           // validFrom = new Date(validFrom.getYear(), validFrom.getMonth(), validFrom.getDate());
+           // validTo = new Date(validTo.getYear(),validTo.getMonth(),validTo.getDate());
+           //
+           // if (validFrom === validTo){
+           //    return 1;
+           // }
+           //console.log('getduration',  this.project.Name, iteration.Name, validFrom, validTo);
            var counter = 0;
            var date_chit = validFrom;
            while ( date_chit <= validTo ) {
@@ -199,7 +210,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
              var next_day = Rally.util.DateTime.add(date_chit,"day",1);
              date_chit = next_day;
            }
-          return counter;
+          return Math.min(counter,1);
    },
    getData: function(){
 
@@ -216,7 +227,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
       pointsAfterCommitment = {name:'Points After Commitment', total: 0, project: this.project.Name, isPercent: false, key: 'pointsAfterCommitment'},
       daysBlocked = {name:'Days Blocked', total: 0, project: this.project.Name, isPercent: false, key: 'daysBlocked'},
       avgBlockerResolution = {name:'Average Blocker Resolution', total: 0, project: this.project.Name, isPercent: false, key: 'avgBlockerResolution'},
-      defectsClosedByTag = {name:'Defects Closed', total: 0, project: this.project.Name, isPercent: false, key: 'defectsClosedByTag'},
+      defectsClosedByTag = {name:'Live Defects Closed', total: 0, project: this.project.Name, isPercent: false, key: 'defectsClosedByTag'},
       piVelocityPlanned = {name:'PIP Velocity', total: 0, project: this.project.Name, isPercent: false, key: 'piVelocityPlanned'},
       piLoadPlanned = {name:'PIP Load', total: 0, project: this.project.Name, isPercent: false, key: 'piLoadPlanned'};
       var idx = 0;
@@ -241,6 +252,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
            daysBlocked[dataIndex] = this.getDaysBlocked(key);
            daysBlocked.total += daysBlocked[dataIndex];
 
+
            avgBlockerResolution[dataIndex] = this.getAverageBlockerResolution(key);
            if (avgBlockerResolution[dataIndex]){
               avgBlockerResolution.total += avgBlockerResolution[dataIndex];
@@ -259,6 +271,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
         },this);
 
+        if (daysBlocked.total){
+           daysBlocked.total = Math.round(daysBlocked.total * 100)/100;
+        }
         avgBlockerResolution.total = Ext.Array.mean(totalBlockedDurations); //avgBlockerResolutionIdx > 0 ? avgBlockerResolution.total/avgBlockerResolutionIdx: 0;
         acceptanceRatio.total = acceptedPoints.total > 0 ? acceptedPoints.total/plannedPoints.total : 0;
 
@@ -470,10 +485,10 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
 
              if (c){
-               plannedVelocities[idx].plannedVelocity = c[1];
+               plannedVelocities[idx].plannedVelocity = c[2];
                plannedVelocities.push({
                  updateDate: r.CreationDate,
-                 value: c[2]
+                 value: c[3]
                });
                idx++;
              }
