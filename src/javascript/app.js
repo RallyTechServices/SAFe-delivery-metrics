@@ -111,7 +111,11 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
          filters: filters,
          fetch: ['ObjectID','Project','Name','StartDate','EndDate','RevisionHistory','PlannedVelocity','CreationDate'],
          limit: 'Infinity',
-         pageSize: 2000
+         pageSize: 2000,
+         sorters: [{
+            property: 'StartDate',
+            direction: 'ASC'
+         }]
       }).load({
          callback: function(records,operation){
             if (operation.wasSuccessful()){
@@ -186,7 +190,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       //     latestDate = this.getReleaseTimeboxRecord().get('ReleaseDate');
 
        Ext.create('Rally.data.lookback.SnapshotStore',{
-         fetch: ['ObjectID','Project','Iteration','PlanEstimate','AcceptedDate','Blocked','_ValidFrom','_ValidTo','_TypeHierarchy','Tags'],
+         fetch: ['FormattedID','ObjectID','Project','Iteration','PlanEstimate','AcceptedDate','Blocked','_ValidFrom','_ValidTo','_TypeHierarchy','Tags'],
          find:{
            "_TypeHierarchy": {$in: ['Defect','HierarchicalRequirement']},
            "Iteration": {$in: timeboxOids},
@@ -295,7 +299,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
                   xtype : 'panel',
                   overflowY: 'hidden',
                   border: false,
-                  cls: 'fieldBucket',
+                  //cls: 'fieldBucket',
                   itemId: 'teamsTab',
                   padding: '8px 0 0 0',
                   items: items,
@@ -305,7 +309,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
                   overflowY: 'hidden',
                   title: "Summary",
                   border: false,
-                  cls: 'fieldBucket',
+                //  cls: 'fieldBucket',
                    itemId: 'summaryTab',
                    padding: '8px 0 0 0',
                    items: [this._getSummaryGrid(calcs)]
@@ -403,6 +407,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         return Ext.widget({
           xtype:'rallygrid',
           store: store,
+          title: "Summary",
           features: [{
             ftype: 'summary'
           }],
@@ -474,7 +479,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         var cols = [{
            dataIndex: 'project',
            text: 'Team',
-           flex: 1,
+           flex: 3,
            summaryType: 'count',
            summaryRenderer: function(value, summaryData, dataIndex) {
               return Ext.String.format('<div class="app-summary">{0} Team{1} Total</div>', value, value !== 1 ? 's' : '');
@@ -482,18 +487,27 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         },{
            dataIndex: 'pointsPlanned',
            text: 'Points Planned',
+           flex: 1,
            summaryType: 'sum'
         },{
            dataIndex: 'pointsAccepted',
            text: 'Points Accepted',
+           flex: 1,
+           summaryType: 'sum'
+        },{
+           dataIndex: 'pointsAdded',
+           text: 'Points Added after Commitment',
+           flex: 1,
            summaryType: 'sum'
         },{
            dataIndex: 'acceptanceRatio',
            text: 'Point Acceptance Rate',
+           flex: 1,
            renderer: function(v, m, r){
               return Math.round(v*100) + '%';
            },
            summaryType: 'average',
+           flex: 1,
            summaryRenderer: function(value, el, summaryData, dataIndex) {
              if (summaryData.data.pointsPlanned > 0 && summaryData.data.pointsAccepted > 0){
                 return Math.round(summaryData.data.pointsAccepted/summaryData.data.pointsPlanned * 100) + '%';
@@ -503,23 +517,34 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         },{
            dataIndex: 'daysBlocked',
            text: 'Days Blocked',
-           summaryType: 'sum'
+           flex: 1,
+           summaryType: 'sum',
+           renderer: function(v){
+              if (v){
+                 return Math.round(v*100)/100;
+              }
+              return v;
+           }
         },{
            dataIndex: 'blockerResolution',
            text: 'Average Days to Resolve Blockers',
+           flex: 1,
            summaryType: 'average',
            renderer: this._numberRenderer
         },{
           dataIndex: 'defectsClosed',
-          text: 'Total number of SIs Closed',
+          text: 'Total number of Defects Closed',
+          flex: 1,
           summaryType: 'sum'
         },{
           dataIndex: 'piPlanVelocity',
           text: 'Total PI Plan Velocity',
+          flex: 1,
           summaryType: 'sum'
         },{
           dataIndex: 'piPlanLoad',
           text: 'Total PI Plan Load',
+          flex: 1,
           summaryType: 'sum'
         }];
         return cols;
