@@ -188,18 +188,19 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          //If this wasn't blocked or unblocked on a weekend, then we want an increment of an 8-hour day
            if (diff <= 8){ //Then we want an increment of an 8-hour day
                if ((validTo.getDay() > 0 && validTo.getDay() < 6) || (validFrom.getDay() > 0 && validFrom.getDay() < 6)){
+                 console.log('getduration', snap.FormattedID, this.project.Name, iteration.Name, validFrom, validTo, diff/8);
+
                  return diff/8;
                }
                return 0;
            }
            //console.log('validFrom',validFrom,validTo);
-           // validFrom = new Date(validFrom.getYear(), validFrom.getMonth(), validFrom.getDate());
-           // validTo = new Date(validTo.getYear(),validTo.getMonth(),validTo.getDate());
-           //
-           // if (validFrom === validTo){
-           //    return 1;
-           // }
-           //console.log('getduration',  this.project.Name, iteration.Name, validFrom, validTo);
+           validFrom = new Date(validFrom.getFullYear(), validFrom.getMonth(), validFrom.getDate());
+           validTo = new Date(validTo.getFullYear(),validTo.getMonth(),validTo.getDate());
+
+           if (validFrom === validTo){
+              return 1;
+           }
            var counter = 0;
            var date_chit = validFrom;
            while ( date_chit <= validTo ) {
@@ -210,7 +211,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
              var next_day = Rally.util.DateTime.add(date_chit,"day",1);
              date_chit = next_day;
            }
-          return Math.min(counter,1);
+           console.log('getduration',  snap.FormattedID, this.project.Name, iteration.Name, validFrom, validTo, counter);
+
+          return Math.max(counter-1,1);
    },
    getData: function(){
 
@@ -271,9 +274,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
         },this);
 
-        if (daysBlocked.total){
-           daysBlocked.total = Math.round(daysBlocked.total * 100)/100;
-        }
+        // if (daysBlocked.total){
+        //    daysBlocked.total = Math.round(daysBlocked.total * 100)/100;
+        // }
         avgBlockerResolution.total = Ext.Array.mean(totalBlockedDurations); //avgBlockerResolutionIdx > 0 ? avgBlockerResolution.total/avgBlockerResolutionIdx: 0;
         acceptanceRatio.total = acceptedPoints.total > 0 ? acceptedPoints.total/plannedPoints.total : 0;
 

@@ -26,45 +26,19 @@
 .app-panel .x-panel-header-text {
    font-family: ProximaNovaSemiBold,Helvetica,Arial;
    color: #555;
-   background-color: #f6f6f6;
 }
 
-.rally-grid .x-panel-header-default {
-   background-color: #f6f6f6!important;
-}
+
 
 .rally-grid .x-panel-header-text-default {
-   background-color: #f6f6f6!important;
    font-size: 12px;
    font-family: ProximaNovaSemiBold,Helvetica,Arial;
 }
 
-.x-panel-body-default {
-   background-color: #f6f6f6!important;
-}
 
 .app-summary {
   font-family: ProximaNovaSemiBold,Helvetica,Arial;
   text-transform: uppercase;
-}
-
-.x-accordion-hd .x-panel-header-text-container{
-  font-family: ProximaNovaSemiBold,Helvetica,Arial;
-  text-transform: uppercase;
-  background-color: #f6f6f6;
-  color: #444;
-  font-size: 16px;
-  border: 1;
-  height: 20px;
-}
-
-.fieldBucket {
-  border-top-right-radius: 2px;
-  border-top-left-radius: 2px;
-}
-
-.x-accordion-item .x-accordion-hd {
-  background-color: #f6f6f6;
 }
 
 .tag-btn {

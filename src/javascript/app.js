@@ -111,7 +111,11 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
          filters: filters,
          fetch: ['ObjectID','Project','Name','StartDate','EndDate','RevisionHistory','PlannedVelocity','CreationDate'],
          limit: 'Infinity',
-         pageSize: 2000
+         pageSize: 2000,
+         sorters: [{
+            property: 'StartDate',
+            direction: 'ASC'
+         }]
       }).load({
          callback: function(records,operation){
             if (operation.wasSuccessful()){
@@ -186,7 +190,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       //     latestDate = this.getReleaseTimeboxRecord().get('ReleaseDate');
 
        Ext.create('Rally.data.lookback.SnapshotStore',{
-         fetch: ['ObjectID','Project','Iteration','PlanEstimate','AcceptedDate','Blocked','_ValidFrom','_ValidTo','_TypeHierarchy','Tags'],
+         fetch: ['FormattedID','ObjectID','Project','Iteration','PlanEstimate','AcceptedDate','Blocked','_ValidFrom','_ValidTo','_TypeHierarchy','Tags'],
          find:{
            "_TypeHierarchy": {$in: ['Defect','HierarchicalRequirement']},
            "Iteration": {$in: timeboxOids},
@@ -295,7 +299,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
                   xtype : 'panel',
                   overflowY: 'hidden',
                   border: false,
-                  cls: 'fieldBucket',
+                  //cls: 'fieldBucket',
                   itemId: 'teamsTab',
                   padding: '8px 0 0 0',
                   items: items,
@@ -305,7 +309,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
                   overflowY: 'hidden',
                   title: "Summary",
                   border: false,
-                  cls: 'fieldBucket',
+                //  cls: 'fieldBucket',
                    itemId: 'summaryTab',
                    padding: '8px 0 0 0',
                    items: [this._getSummaryGrid(calcs)]
@@ -403,6 +407,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         return Ext.widget({
           xtype:'rallygrid',
           store: store,
+          title: "Summary",
           features: [{
             ftype: 'summary'
           }],
@@ -513,7 +518,13 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            dataIndex: 'daysBlocked',
            text: 'Days Blocked',
            flex: 1,
-           summaryType: 'sum'
+           summaryType: 'sum',
+           renderer: function(v){
+              if (v){
+                 return Math.round(v*100)/100;
+              }
+              return v;
+           }
         },{
            dataIndex: 'blockerResolution',
            text: 'Average Days to Resolve Blockers',
