@@ -188,7 +188,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          //If this wasn't blocked or unblocked on a weekend, then we want an increment of an 8-hour day
            if (diff <= 8){ //Then we want an increment of an 8-hour day
                if ((validTo.getDay() > 0 && validTo.getDay() < 6) || (validFrom.getDay() > 0 && validFrom.getDay() < 6)){
-                 console.log('getduration', snap.FormattedID, this.project.Name, iteration.Name, validFrom, validTo, diff/8);
+              //   console.log('getduration', snap.FormattedID, this.project.Name, iteration.Name, validFrom, validTo, diff/8);
 
                  return diff/8;
                }
@@ -211,7 +211,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
              var next_day = Rally.util.DateTime.add(date_chit,"day",1);
              date_chit = next_day;
            }
-           console.log('getduration',  snap.FormattedID, this.project.Name, iteration.Name, validFrom, validTo, counter);
+          // console.log('getduration',  snap.FormattedID, this.project.Name, iteration.Name, validFrom, validTo, counter);
 
           return Math.max(counter-1,1);
    },
