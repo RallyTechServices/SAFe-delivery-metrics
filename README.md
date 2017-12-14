@@ -8,6 +8,15 @@
 
 The dataset used in this app is all user stories and defects in leaf projects (projects with no children) associated with an iteration that overlaps with the selected release date boundaries.  The story or defect does not need to be explicitly associated with the release if it is explicitly associated with an iteration that overlaps with the release boundaries.  
 
+### Days Blocked
+The cumulative approximation of number of days blocked.  This is calculated as follows:
+If the blocked time is less than 8 hours for a blocked duration, then the blocked time will be the fraction of an 8 hour day that represents.  (e.g. blocked for 2 hours will result in .25 days of blocked time).
+
+If blocked time is greater than 8 hours, and less than 36, then blocked time will be 1 day.
+36 hours to 60 hours -- 2 days.
+
+Blocked time will exclude weekends, so an item blocked from 5:00 PM on Friday and unblocked at 8 AM on Monday will result in 15 hours blocked time, which will render as 1 day.  
+
 
 ### PI Planned Velocity
 This is the value of the Planned Velocity set for the iteration at the moment in time that represents the number of days offset from the selected Release (see Days Offset from Release App Setting).  This value is calculated from
