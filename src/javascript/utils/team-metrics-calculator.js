@@ -250,9 +250,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
            }
 
            pointsAfterCommitment[dataIndex] = this.getPointsAddedAfterCommitment(key);
-           pointsAfterCommitment.total += pointsAfterCommitment[dataIndex];
+           pointsAfterCommitment.total += Math.max(pointsAfterCommitment[dataIndex] || 0,0);
 
-           daysBlocked[dataIndex] = this.getDaysBlocked(key);
+           daysBlocked[dataIndex] = this.getDaysBlocked(key) || 0;
            daysBlocked.total += daysBlocked[dataIndex];
 
 
@@ -277,7 +277,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
         // if (daysBlocked.total){
         //    daysBlocked.total = Math.round(daysBlocked.total * 100)/100;
         // }
-        avgBlockerResolution.total = Ext.Array.mean(totalBlockedDurations); //avgBlockerResolutionIdx > 0 ? avgBlockerResolution.total/avgBlockerResolutionIdx: 0;
+        avgBlockerResolution.total = Ext.Array.mean(totalBlockedDurations) || 0; //avgBlockerResolutionIdx > 0 ? avgBlockerResolution.total/avgBlockerResolutionIdx: 0;
         acceptanceRatio.total = acceptedPoints.total > 0 ? acceptedPoints.total/plannedPoints.total : 0;
 
         this.data = [
@@ -357,8 +357,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      if (!this.calculatedData[iterationName]){
         this._calculate(iterationName);
      }
-
-     return this.calculatedData[iterationName].totalPointsAtSprintEnd - this.calculatedData[iterationName].plannedPoints || 0;
+     return Math.max(this.calculatedData[iterationName].totalPointsAtSprintEnd - this.calculatedData[iterationName].plannedPoints || 0, 0);
    },
    getDaysBlocked: function(iterationName){
      if (!this.calculatedData[iterationName]){
