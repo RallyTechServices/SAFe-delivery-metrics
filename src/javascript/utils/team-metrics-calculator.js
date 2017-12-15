@@ -11,6 +11,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
       this.daysOffsetFromPIStart = config.daysOffsetFromPIStart || 0;
       this.release = config.release;
       this._filterIterationRevisions(config.iterationRevisions);
+      this.showPIPMetrics = config.showPIPMetrics;
 
       this.defectTags = [];
       if (config.defectTag){
@@ -58,6 +59,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
      var offsetDate = Rally.util.DateTime.add(iteration.StartDate, 'day', daysOffsetFromIterationStart),
          iterationEndDate = iteration.EndDate,
+         releaseEndDate = this.release.ReleaseDate,
          pipOffsetDate = Rally.util.DateTime.add(this.release.ReleaseStartDate, 'day', this.daysOffsetFromPIStart);;
      var snaps = this.snapshotsByIterationOid[iteration.ObjectID] || [],
          blockedDurations = {};
@@ -78,7 +80,8 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          }
          //If the snapshot is current and has an accepted date, then
          //count it towards accepted points
-         if (validTo > new Date() && snap.AcceptedDate.length > 0){
+         //console.log('snap.plan',iterationName, snap.PlanEstimate, validTo);
+         if (validTo > new Date()  && snap.AcceptedDate.length > 0){
             data.acceptedPoints += snap.PlanEstimate;
          }
 
@@ -135,7 +138,6 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      data.blockedDays = Ext.Array.sum(allBlockedDurations);
      data.averageBlockedResolutionTime = Ext.Array.mean(allBlockedDurations);
      data.blockedDurations = allBlockedDurations;
-
      data.piPlanVelocity = this._calculatePIPlanVelocity(iteration, this.daysOffsetFromPIStart, this.release);
      this.calculatedData[iterationName] = data;
 
@@ -287,10 +289,12 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
           pointsAfterCommitment,
           daysBlocked,
           avgBlockerResolution,
-          defectsClosedByTag,
-          piVelocityPlanned,
-          piLoadPlanned
+          defectsClosedByTag
         ];
+
+        if (this.showPIPMetrics){
+            this.data = this.data.concat([piVelocityPlanned,piLoadPlanned]);
+        }
 
         return this.data;
    },

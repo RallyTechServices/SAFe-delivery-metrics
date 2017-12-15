@@ -12,7 +12,8 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         daysOffsetFromIterationStart: 0,
         defectTag: null,
         daysOffsetFromPIStart: 0,
-        precision: 2
+        precision: 2,
+        showPIPMetrics: true
       }
     },
 
@@ -132,42 +133,47 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
     _fetchIterationRevisions: function(data){
       var deferred = Ext.create('Deft.Deferred');
 
-      var filters = _.map(data.iterations, function(i){
-          return {
-             property: 'RevisionHistory.ObjectID',
-             value: i.get('RevisionHistory').ObjectID
-          };
-      });
-      filters = Rally.data.wsapi.Filter.or(filters);
-      this.logger.log('filters', filters.toString());
-      filters = filters.and({
-          property: 'Description',
-          operator: 'contains',
-          value: 'PLANNED VELOCITY'
-      });
+      if (!this.getShowPIPMetrics()){
+        data.iterationRevisions = [];
+        deferred.resolve(data);
 
-      Ext.create('Rally.data.wsapi.Store',{
-         model: 'Revision',
-         filters: filters,
-         fetch: ['ObjectID','RevisionHistory','Description','CreationDate'],
-         limit: 'Infinity',
-         pageSize: 2000,
-         enablePostGet: true,
-         sorters: [{
-            property: 'CreationDate',
-            direction: 'ASC'
-         }]
-      }).load({
-         callback: function(records,operation){
-            if (operation.wasSuccessful()){
-              data.iterationRevisions = records;
-              deferred.resolve(data);
-            } else {
-              deferred.reject('ERROR loading iteration revisions: ' + operation.error && operation.error.errors.join(','));
-            }
-         }
-      });
+      } else {
+        var filters = _.map(data.iterations, function(i){
+            return {
+               property: 'RevisionHistory.ObjectID',
+               value: i.get('RevisionHistory').ObjectID
+            };
+        });
+        filters = Rally.data.wsapi.Filter.or(filters);
+        this.logger.log('filters', filters.toString());
+        filters = filters.and({
+            property: 'Description',
+            operator: 'contains',
+            value: 'PLANNED VELOCITY'
+        });
 
+        Ext.create('Rally.data.wsapi.Store',{
+           model: 'Revision',
+           filters: filters,
+           fetch: ['ObjectID','RevisionHistory','Description','CreationDate'],
+           limit: 'Infinity',
+           pageSize: 2000,
+           enablePostGet: true,
+           sorters: [{
+              property: 'CreationDate',
+              direction: 'ASC'
+           }]
+        }).load({
+           callback: function(records,operation){
+              if (operation.wasSuccessful()){
+                data.iterationRevisions = records;
+                deferred.resolve(data);
+              } else {
+                deferred.reject('ERROR loading iteration revisions: ' + operation.error && operation.error.errors.join(','));
+              }
+           }
+        });
+      }
       return deferred.promise;
     },
     _fetchSnapshots: function(data){
@@ -195,7 +201,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            "_TypeHierarchy": {$in: ['Defect','HierarchicalRequirement']},
            "Iteration": {$in: timeboxOids},
            "_ValidTo": {$gte: earliestDate},
-           "_ValidFrom": {$lte: latestDate},
+           //"_ValidFrom": {$lte: latestDate},
            "_ProjectHierarchy": this.getContext().getProject().ObjectID //This probably isn't needed since the iterations are specified
           },
           hydrate: ['_TypeHierarchy','Project'],
@@ -234,7 +240,8 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
              iterationRevisions: data.iterationRevisions,
              daysOffsetFromIterationStart: this.getdaysOffsetFromIterationStart(),
              daysOffsetFromPIStart: this.getDaysOffsetFromPIStart(),
-             defectTag: this.getDefectTag()
+             defectTag: this.getDefectTag(),
+             showPIPMetrics: this.getShowPIPMetrics()
           });
 
           //newData = newData.concat(calc.getData());
@@ -383,7 +390,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
       var newData = [];
       _.each(calcs, function(c){
          var project = c.project;
-         newData.push({
+         var row = {
            project: project.Name,
            pointsPlanned: c.getPlannedPointsTotal(),
            pointsAccepted: c.getAcceptedPointsTotal(),
@@ -394,7 +401,13 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            defectsClosed: c.getDefectsClosedTotal(),
            piPlanVelocity: c.getPIPlanVelocityTotal(),
            piPlanLoad: c.getPIPlanLoadTotal()
-         });
+         };
+
+         // if (this.getShowPIPMetrics()){
+         //    row.piPlanVelocity = c.getPIPlanVelocityTotal();
+         //    row.piPlanLoad = c.getPIPlanLoadTotal();
+         // }
+         newData.push(row);
       });
       this.logger.log('data',newData);
 
@@ -458,14 +471,23 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
         cols.push({
           dataIndex: 'total',
           text: 'Total',
-          renderer: this._numberRenderer,
+          renderer: this._numberTotalRenderer,
           flex: 1
         });
 
         return cols;
     },
+    _numberTotalRenderer: function(v,m,r){
+        if (r.get('isPercent') === true ){
+            v = Math.round(v*100) + '%';
+        }
 
-    _numberRenderer: function(v,m,r){
+       if (!isNaN(v) && v % 1 !== 0){
+          v = v.toFixed(2);
+       }
+         return '<div class="app-summary">' + v + "</div>";
+    },
+    _numberRenderer: function(v,m,r,rowIndex,colIndex){
         if (r.get('isPercent') === true ){
             return Math.round(v*100) + '%';
         }
@@ -488,17 +510,26 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            dataIndex: 'pointsPlanned',
            text: 'Points Planned',
            flex: 1,
-           summaryType: 'sum'
+           summaryType: 'sum',
+           summaryRenderer: function(value, summaryData, dataIndex) {
+              return Ext.String.format('<div class="app-summary">{0}</div>', value);
+          }
         },{
            dataIndex: 'pointsAccepted',
            text: 'Points Accepted',
            flex: 1,
-           summaryType: 'sum'
+           summaryType: 'sum',
+           summaryRenderer: function(value, summaryData, dataIndex) {
+              return Ext.String.format('<div class="app-summary">{0}</div>', value);
+          }
         },{
            dataIndex: 'pointsAdded',
            text: 'Points Added after Commitment',
            flex: 1,
-           summaryType: 'sum'
+           summaryType: 'sum',
+           summaryRenderer: function(value, summaryData, dataIndex) {
+              return Ext.String.format('<div class="app-summary">{0}</div>', value);
+          }
         },{
            dataIndex: 'acceptanceRatio',
            text: 'Point Acceptance Rate',
@@ -510,7 +541,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            flex: 1,
            summaryRenderer: function(value, el, summaryData, dataIndex) {
              if (summaryData.data.pointsPlanned > 0 && summaryData.data.pointsAccepted > 0){
-                return Math.round(summaryData.data.pointsAccepted/summaryData.data.pointsPlanned * 100) + '%';
+                return '<div class="app-summary">' + Math.round(summaryData.data.pointsAccepted/summaryData.data.pointsPlanned * 100) + '%</div>';
              }
              return '--';
            }
@@ -524,29 +555,51 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
                  return Math.round(v*100)/100;
               }
               return v;
-           }
+           },
+           summaryRenderer: function(value, summaryData, dataIndex) {
+              return Ext.String.format('<div class="app-summary">{0}</div>', value);
+          }
         },{
            dataIndex: 'blockerResolution',
            text: 'Average Days to Resolve Blockers',
            flex: 1,
            summaryType: 'average',
-           renderer: this._numberRenderer
+           renderer: this._numberRenderer,
+           summaryRenderer: function(value, summaryData, dataIndex) {
+               if (value > 0){
+                  value = value.toFixed(2);
+               }
+              return Ext.String.format('<div class="app-summary">{0}</div>', value);
+          }
         },{
           dataIndex: 'defectsClosed',
           text: 'Total number of Defects Closed',
           flex: 1,
-          summaryType: 'sum'
-        },{
-          dataIndex: 'piPlanVelocity',
-          text: 'Total PI Plan Velocity',
-          flex: 1,
-          summaryType: 'sum'
-        },{
-          dataIndex: 'piPlanLoad',
-          text: 'Total PI Plan Load',
-          flex: 1,
-          summaryType: 'sum'
-        }];
+          summaryType: 'sum',
+          summaryRenderer: function(value, summaryData, dataIndex) {
+             return Ext.String.format('<div class="app-summary">{0}</div>', value);
+         }
+       }];
+
+        if (this.getShowPIPMetrics()){
+           cols = cols.concat([{
+             dataIndex: 'piPlanVelocity',
+             text: 'Total PI Plan Velocity',
+             flex: 1,
+             summaryType: 'sum',
+             summaryRenderer: function(value, summaryData, dataIndex) {
+                return Ext.String.format('<div class="app-summary">{0}</div>', value);
+            }
+           },{
+             dataIndex: 'piPlanLoad',
+             text: 'Total PI Plan Load',
+             flex: 1,
+             summaryType: 'sum',
+             summaryRenderer: function(value, summaryData, dataIndex) {
+                return Ext.String.format('<div class="app-summary">{0}</div>', value);
+            }
+           }]);
+         }
         return cols;
     },
     _addAppMessage: function(msg){
@@ -579,6 +632,9 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
     getdaysOffsetFromIterationStart: function(){
         return this.getSetting('daysOffsetFromIterationStart');
     },
+    getShowPIPMetrics: function(){
+       return this.getSetting('showPIPMetrics');
+    },
     getDefectTag: function(){
       return this.getSetting('defectTag');
     },
@@ -607,12 +663,19 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
           margin: 10,
           labelWidth: 200
         },{
+           name: 'showPIPMetrics',
+           fieldLabel: 'Show PIP metrics',
+           xtype:'rallycheckboxfield',
+           labelAlign: 'right',
+           checked: this.getSetting('showPIPMetrics'),
+           margin: 10,
+           labelWidth: 200
+        },{
            name: 'defectTag',
            xtype: 'enhancedtagselector',
            fieldLabel: '',
            value: this.getSetting('defectTag'),
-           width: '100%',
-
+           width: '100%'
         }];
     },
 

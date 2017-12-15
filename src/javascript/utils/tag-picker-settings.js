@@ -88,6 +88,7 @@ Ext.define('CArABU.utils.settings.EnhancedTagSelector',{
               items: this._getSelectedTagPills()
             }]
          });
+         this.fireEvent('ready');
 
      },
      _refreshPills: function(pk, newSelections){
