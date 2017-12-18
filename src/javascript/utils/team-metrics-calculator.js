@@ -361,7 +361,8 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      if (!this.calculatedData[iterationName]){
         this._calculate(iterationName);
      }
-     return Math.max(this.calculatedData[iterationName].totalPointsAtSprintEnd - this.calculatedData[iterationName].plannedPoints || 0, 0);
+     return Math.max(this.calculatedData[iterationName].acceptedPoints - this.calculatedData[iterationName].plannedPoints || 0, 0);
+     //return Math.max(this.calculatedData[iterationName].totalPointsAtSprintEnd - this.calculatedData[iterationName].plannedPoints || 0, 0);
    },
    getDaysBlocked: function(iterationName){
      if (!this.calculatedData[iterationName]){
