@@ -186,10 +186,11 @@ describe("Team Metrics Calculator", function() {
     it('should calculate the points added after the iteraiton commit time for each iteration', function() {
       var snapshots = [
         Ext.create('mockSnapshot',{ ObjectID: 1, Name: 'Story A', PlanEstimate: 3, Iteration: 11, Project:projectA, _ValidFrom: '2017-07-04T12:00:43Z', _ValidTo: '2017-07-08T12:00:00Z' }),
-        Ext.create('mockSnapshot',{ ObjectID: 1, Name: 'Story A', PlanEstimate: 4, Iteration: 11, Project:projectA, _ValidFrom: '2017-07-08T12:00:43Z', _ValidTo: '2017-07-31T12:00:00Z' }),
+        Ext.create('mockSnapshot',{ ObjectID: 1, Name: 'Story A', PlanEstimate: 4, Iteration: 11, Project:projectA, _ValidFrom: '2017-07-08T12:00:43Z', _ValidTo: '9999-07-31T12:00:00Z' }),
         Ext.create('mockSnapshot',{ ObjectID: 2, Name: 'Story B', PlanEstimate: 4, Iteration: 11, Project:projectA, _ValidFrom: '2017-07-07T12:00:01Z', _ValidTo: '2017-07-08T12:00:00Z' }),
-        Ext.create('mockSnapshot',{ ObjectID: 2, Name: 'Story B', AcceptedDate: '2017-08-01T12:00:00Z', PlanEstimate: 5, Iteration: 11, Project:projectA, _ValidFrom: '2017-07-08T12:00:00Z', _ValidTo: '2017-09-21T12:00:00Z' }),
+        Ext.create('mockSnapshot',{ ObjectID: 2, Name: 'Story B', AcceptedDate: '2017-08-01T12:00:00Z', PlanEstimate: 5, Iteration: 11, Project:projectA, _ValidFrom: '2017-07-08T12:00:00Z', _ValidTo: '9999-09-21T12:00:00Z' }),
         Ext.create('mockSnapshot',{ ObjectID: 3, Name: 'Story C', PlanEstimate: 6, Iteration: 11, Project:projectA, _ValidFrom: '2017-07-19T12:00:43Z', _ValidTo: '2017-07-31T12:00:00Z' }),
+        Ext.create('mockSnapshot',{ ObjectID: 3, Name: 'Story C', PlanEstimate: 6, Iteration: 11, Project:projectA, AcceptedDate: '2017-07-31T1:00:00Z', _ValidFrom: '2017-07-31T12:00:43Z', _ValidTo: '9999-08-30T12:00:00Z' })
       ];
 
       var calcA = Ext.create('CArABU.app.utils.teamMetricsCalculator',{
@@ -200,7 +201,8 @@ describe("Team Metrics Calculator", function() {
           release: release
       });
       expect(calcA.getPlannedPoints('Iteration 1')).toBe(3);
-      expect(calcA.getPointsAddedAfterCommitment('Iteration 1')).toBe(6);
+      expect(calcA.getAcceptedPoints('Iteration 1')).toBe(11);
+      expect(calcA.getPointsAddedAfterCommitment('Iteration 1')).toBe(8);
 
     });
 
@@ -250,8 +252,8 @@ describe("Team Metrics Calculator", function() {
           hoursOffsetFromIterationStart: 0,
           release: release
       });
-      expect(calcA.getDaysBlocked('Iteration 1')).toBe(26.5);
-      expect(calcA.getAverageBlockerResolution('Iteration 1')).toBe(2.65);
+      expect(calcA.getDaysBlocked('Iteration 1')).toBe(19.5);
+      expect(calcA.getAverageBlockerResolution('Iteration 1')).toBe(1.95);
 
     });
 
@@ -302,7 +304,7 @@ describe("Team Metrics Calculator", function() {
 
       expect(calcA._getBlockedDuration({
           _ValidFrom: '2017-07-04T12:00:00Z',
-          _ValidTo: '2017-07-13T12:00:00Z' },iterationData)).toBe(7);
+          _ValidTo: '2017-07-13T12:00:00Z' },iterationData)).toBe(6);
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-06T12:00:00Z',
@@ -310,15 +312,15 @@ describe("Team Metrics Calculator", function() {
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-13T12:00:00Z',
-            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(4);
+            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(3);
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-04T12:00:00Z',
-            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(10);
+            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(9);
 
       expect(calcA._getBlockedDuration({
             _ValidFrom: '2017-07-04T12:00:00Z',
-            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(10);
+            _ValidTo: '2017-07-20T14:00:00Z'},iterationData)).toBe(9);
 
 
     });
