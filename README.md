@@ -2,9 +2,11 @@
 ![ScreenShot](https://travis-ci.org/RallyTechServices/SAFe-delivery-metrics.svg?branch=master)
 
 ## Summary/Description
-** THIS APP IS IN PROGRESS **
+This app responds to a Release scoped dashboard to show SAFe metrics for the selected Program Increment.  Metrics are listed below.  
 
-![screenshot](./images/screenshot.png "This is an example")
+![screenshot](./images/summary-view.png "Summary View")
+
+![screenshot](./images/safe-team-view.png "Team View")
 
 The dataset used in this app is all user stories and defects in leaf projects (projects with no children) associated with an iteration that overlaps with the selected release date boundaries.  The story or defect does not need to be explicitly associated with the release if it is explicitly associated with an iteration that overlaps with the release boundaries.  
 
