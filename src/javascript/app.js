@@ -245,7 +245,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
           });
 
           //newData = newData.concat(calc.getData());
-          items.push(this._addTeamGrid(calc.getData(), project.Name));
+          items.push(this._addTeamGrid(calc.getDisplayedData(), project.Name));
           calcs.push(calc);
       }, this);
 
@@ -392,9 +392,11 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
          var project = c.project;
          var row = {
            project: project.Name,
-           pointsPlanned: c.getPlannedPointsTotal(),
+           plannedPoints: c.getPlannedPointsTotal(),
+           plannedAcceptedPoints: c.getPlannedAcceptedPointsTotal(),
            pointsAccepted: c.getAcceptedPointsTotal(),
            acceptanceRatio: c.getAcceptanceRatioTotal(),
+           plannedAcceptanceRatio: c.getPlannedAcceptanceRatioTotal(),
            pointsAdded: c.getPointsAfterCommitmentTotal(),
            daysBlocked: c.getDaysBlockedTotal(),
            blockerResolution: c.getBlockerResolutionTotal(),
@@ -507,7 +509,7 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
               return Ext.String.format('<div class="app-summary">{0} Team{1} Total</div>', value, value !== 1 ? 's' : '');
           }
         },{
-           dataIndex: 'pointsPlanned',
+           dataIndex: 'plannedPoints',
            text: 'Points Planned',
            flex: 1,
            summaryType: 'sum',
@@ -523,6 +525,12 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
               return Ext.String.format('<div class="app-summary">{0}</div>', value);
           }
         },{
+           dataIndex: 'plannedAcceptedPoints',
+           text: 'Planned Accepted Points',
+           flex: 1,
+           //hidden: true,
+           summaryType: 'sum'
+        },{
            dataIndex: 'pointsAdded',
            text: 'Points Added after Commitment',
            flex: 1,
@@ -530,6 +538,21 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            summaryRenderer: function(value, summaryData, dataIndex) {
               return Ext.String.format('<div class="app-summary">{0}</div>', value);
           }
+        },{
+           dataIndex: 'plannedAcceptanceRatio',
+           text: 'Planned Point Acceptance Rate',
+           flex: 1,
+           renderer: function(v, m, r){
+              return Math.round(v*100) + '%';
+           },
+           summaryType: 'average',
+           flex: 1,
+           summaryRenderer: function(value, el, summaryData, dataIndex) {
+             if (summaryData.data.plannedPoints > 0 && summaryData.data.plannedAcceptedPoints > 0){
+                return '<div class="app-summary">' + Math.round(summaryData.data.plannedAcceptedPoints/summaryData.data.plannedPoints * 100) + '%</div>';
+             }
+             return '--';
+           }
         },{
            dataIndex: 'acceptanceRatio',
            text: 'Point Acceptance Rate',
@@ -540,8 +563,8 @@ Ext.define("CArABU.app.safeDeliveryMetrics", {
            summaryType: 'average',
            flex: 1,
            summaryRenderer: function(value, el, summaryData, dataIndex) {
-             if (summaryData.data.pointsPlanned > 0 && summaryData.data.pointsAccepted > 0){
-                return '<div class="app-summary">' + Math.round(summaryData.data.pointsAccepted/summaryData.data.pointsPlanned * 100) + '%</div>';
+             if (summaryData.data.plannedPoints > 0 && summaryData.data.pointsAccepted > 0){
+                return '<div class="app-summary">' + Math.round(summaryData.data.pointsAccepted/summaryData.data.plannedPoints * 100) + '%</div>';
              }
              return '--';
            }

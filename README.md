@@ -8,6 +8,21 @@
 
 The dataset used in this app is all user stories and defects in leaf projects (projects with no children) associated with an iteration that overlaps with the selected release date boundaries.  The story or defect does not need to be explicitly associated with the release if it is explicitly associated with an iteration that overlaps with the release boundaries.  
 
+### Planned Points
+The number of points associated with the iteration at the number of days offset from the Iteration (see Days Offset from Iteration App Setting).
+
+### Accepted Points
+The number of accepted points currently associated with the iteration.  This means that if points were accepted AFTER the iteration, they are still included here.  
+
+### Acceptance ratio
+The number of Accepted points currently associated with the iteration divided by the Planned Points for the iteration.  
+
+### Planned Acceptance Ratio
+The number of accepted points currently associated with the iteration that are associated with work items included in the original Planned Points calculation (see Planned Points).  Note that if the Plan Estimate for a planned story increased or decreased since the planned date, then the latest change will be included in the Planned Acceptance Ratio calculation.  
+
+### Points After Commitment
+The number of accepted points currently associated with the iteration minus the Planned Points for the iteration at the number of days offset from the Iteration (see Days Offset from Iteration App Setting)  NOTE that this assumes that all points associated with an older iteration are currently accepted.  If there are unaccepted points in an iteration, then the points added after commitment may not reflect the accurate number.  Also, if points were removed from the iteration, this number will represent the net addition.  If more points were removed than added and the resulting number is less than 0, then this number will be 0.   
+
 ### Days Blocked
 The cumulative approximation of number of days blocked.  This is calculated as follows:
 If the blocked time is less than 8 hours for a blocked duration, then the blocked time will be the fraction of an 8 hour day that represents.  (e.g. blocked for 2 hours will result in .25 days of blocked time).
@@ -17,6 +32,8 @@ If blocked time is greater than 8 hours, and less than 36, then blocked time wil
 
 Blocked time will exclude weekends, so an item blocked from 5:00 PM on Friday and unblocked at 8 AM on Monday will result in 15 hours blocked time, which will render as 1 day.  
 
+### Average Blocker Resolution
+Average number of days to resolve a blocker. This is a mean of all blocker durations.  If an item was blocked and unblocked twice, then the average time to resolve that blocker would be the average of the two durations for that blocker.  It is not cumulative.  
 
 ### PI Planned Velocity
 This is the value of the Planned Velocity set for the iteration at the moment in time that represents the number of days offset from the selected Release (see Days Offset from Release App Setting).  This value is calculated from
@@ -28,8 +45,13 @@ at the moment in time that represents the number of days offset from the selecte
 
 ## App Settings
 ### Days Offset from Iteration
+The number of days from the beginning of the iteration that represents the point at which we calculate the planned points.
+
 ### Days Offset from Release
+The number of days from the beginning of the release that represents the point at which we calculate the planned points for the release.
+
 ### Defect Tags
+Tags associated with Defects to include in the Live Defects Closed calculation.
 
 ## Caveats:  
 If an artifact was accepted within the sprint boundaries and then moved from the sprint, it will not be counted in the accepted points in the sprint since we are using the currently accepted points for work items associated with the sprint.

@@ -55,6 +55,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
         piPlanLoad: 0
      };
 
+     var iterationPlannedObjectIDs = [],
+          iterationAcceptedItems= [];
+
      if (!iteration){ this.calculatedData[iterationName] = {}; }
 
      var offsetDate = Rally.util.DateTime.add(iteration.StartDate, 'day', daysOffsetFromIterationStart),
@@ -74,6 +77,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
          if (validFrom <= offsetDate && validTo > offsetDate){
             data.plannedPoints += snap.PlanEstimate;
+            iterationPlannedObjectIDs.push(snap.ObjectID);
          }
          if (validFrom <= pipOffsetDate && validTo > pipOffsetDate){
             data.piPlanLoad += snap.PlanEstimate;
@@ -83,6 +87,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          //console.log('snap.plan',iterationName, snap.PlanEstimate, validTo);
          if (validTo > new Date()  && snap.AcceptedDate.length > 0){
             data.acceptedPoints += snap.PlanEstimate;
+            iterationAcceptedItems.push(snap);
          }
 
          if (validFrom <= iterationEndDate && validTo > iterationEndDate){
@@ -109,7 +114,6 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
                  blockedDurations[snap.ObjectID].currentlyBlocked = true;
               }
             }
-
          }
       } else {
         if (blockedDurations[snap.ObjectID]){
@@ -134,6 +138,16 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
           arr = arr.concat(obj.durations);
           return arr;
      },[]);
+
+     //Now calculate the accepted planned ratio
+     var plannedAcceptedItemsTotal = _.reduce(iterationAcceptedItems, function(total, i){
+         if (_.contains(iterationPlannedObjectIDs, i.ObjectID)){
+            total += i.PlanEstimate;
+         }
+         return total;
+     }, 0);
+
+     data.plannedAcceptedPoints = plannedAcceptedItemsTotal;
 
      data.blockedDays = Ext.Array.sum(allBlockedDurations);
      data.averageBlockedResolutionTime = Ext.Array.mean(allBlockedDurations);
@@ -225,7 +239,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
       var avgBlockerResolutionIdx = 0,
       totalBlockedDurations = [],
-      acceptanceRatioIdx = 0,
+    //  acceptanceRatioIdx = 0,
+      plannedAcceptedPointsTotal = 0,
+      plannedAcceptedPoints = {name:'Planned Accepted Points', total: 0, project: this.project.Name, isPercent: false, key: 'plannedAcceptedPoints', hidden: true},
       plannedPoints = {name:'Planned Points', total: 0, project: this.project.Name, isPercent: false, key: 'plannedPoints'},
       acceptedPoints = {name:'Accepted Points', total: 0, project: this.project.Name, isPercent: false, key: 'acceptedPoints'},
       acceptanceRatio = {name:'Acceptance Ratio', total: 0, project: this.project.Name, isPercent: true, key: 'acceptanceRatio'},
@@ -234,7 +250,9 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
       avgBlockerResolution = {name:'Average Blocker Resolution', total: 0, project: this.project.Name, isPercent: false, key: 'avgBlockerResolution'},
       defectsClosedByTag = {name:'Live Defects Closed', total: 0, project: this.project.Name, isPercent: false, key: 'defectsClosedByTag'},
       piVelocityPlanned = {name:'PIP Velocity', total: 0, project: this.project.Name, isPercent: false, key: 'piVelocityPlanned'},
-      piLoadPlanned = {name:'PIP Load', total: 0, project: this.project.Name, isPercent: false, key: 'piLoadPlanned'};
+      piLoadPlanned = {name:'PIP Load', total: 0, project: this.project.Name, isPercent: false, key: 'piLoadPlanned'},
+      plannedAcceptanceRatio = {name:'Planned Acceptance Ratio', total: 0, project: this.project.Name, isPercent: true, key: 'plannedAcceptanceRatio'};
+
       var idx = 0;
         Ext.Object.each(this.iterationByName, function(key,i){
            var dataIndex = key.toString();
@@ -246,10 +264,10 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
            acceptedPoints.total += acceptedPoints[dataIndex];
 
            acceptanceRatio[dataIndex] = this.getAcceptanceRatio(key);
-           if (acceptanceRatio[dataIndex]){
-              acceptanceRatio.total += acceptanceRatio[dataIndex];
-              acceptanceRatioIdx++;
-           }
+
+           //plannedAcceptedPointsTotal += this.getPlannedAcceptedPoints(key);
+           plannedAcceptedPoints.total += this.getPlannedAcceptedPoints(key);
+           plannedAcceptanceRatio[dataIndex] = this.getPlannedAcceptanceRatio(key);
 
            pointsAfterCommitment[dataIndex] = this.getPointsAddedAfterCommitment(key);
            pointsAfterCommitment.total += Math.max(pointsAfterCommitment[dataIndex] || 0,0);
@@ -280,12 +298,15 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
         //    daysBlocked.total = Math.round(daysBlocked.total * 100)/100;
         // }
         avgBlockerResolution.total = Ext.Array.mean(totalBlockedDurations) || 0; //avgBlockerResolutionIdx > 0 ? avgBlockerResolution.total/avgBlockerResolutionIdx: 0;
-        acceptanceRatio.total = acceptedPoints.total > 0 ? acceptedPoints.total/plannedPoints.total : 0;
+        acceptanceRatio.total = plannedPoints.total > 0 ? acceptedPoints.total/plannedPoints.total : 0;
+        plannedAcceptanceRatio.total = plannedPoints.total > 0 ? plannedAcceptedPoints.total/plannedPoints.total : 0;
 
         this.data = [
           plannedPoints,
           acceptedPoints,
           acceptanceRatio,
+          plannedAcceptedPoints,
+          plannedAcceptanceRatio,
           pointsAfterCommitment,
           daysBlocked,
           avgBlockerResolution,
@@ -296,7 +317,15 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
             this.data = this.data.concat([piVelocityPlanned,piLoadPlanned]);
         }
 
-        return this.data;
+       return this.data;
+   },
+   getDisplayedData: function(){
+
+     var data = this.getData(),
+          displayedData = Ext.Array.filter(data, function(d){
+        return !d.hidden;
+     });
+     return displayedData;
    },
    _getTotal: function(key){
      var data = this.getData();
@@ -306,6 +335,12 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
    getPlannedPointsTotal: function(){
      return this._getTotal('plannedPoints');
+   },
+   getPlannedAcceptedPointsTotal: function(){
+     return this._getTotal('plannedAcceptedPoints');
+   },
+   getPlannedAcceptanceRatioTotal: function(){
+     return this._getTotal('plannedAcceptanceRatio');
    },
    getAcceptedPointsTotal: function(){
      return this._getTotal('acceptedPoints');
@@ -356,6 +391,21 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
 
      return this.calculatedData[iterationName].plannedPoints > 0 ?
           this.calculatedData[iterationName].acceptedPoints / this.calculatedData[iterationName].plannedPoints : 0;
+   },
+   getPlannedAcceptanceRatio: function(iterationName){
+     if (!this.calculatedData[iterationName]){
+        this._calculate(iterationName);
+     }
+
+     return this.calculatedData[iterationName].plannedPoints > 0 ?
+          this.calculatedData[iterationName].plannedAcceptedPoints / this.calculatedData[iterationName].plannedPoints : 0;
+
+   },
+   getPlannedAcceptedPoints: function(iterationName){
+     if (!this.calculatedData[iterationName]){
+        this._calculate(iterationName);
+     }
+     return this.calculatedData[iterationName].plannedAcceptedPoints || 0;
    },
    getPointsAddedAfterCommitment: function(iterationName){
      if (!this.calculatedData[iterationName]){
