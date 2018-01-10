@@ -440,10 +440,7 @@ describe("Team Metrics Calculator", function() {
 
         Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 3, Name: 'Defect C', AcceptedDate: null, Tags: [123,456], Iteration: 21, Project:projectA, _ValidFrom: '2017-07-18T12:00:43Z', _ValidTo: '2017-07-21T12:00:00Z' }),
         Ext.create('mockSnapshot',{ _TypeHierarchy: ['PersistableObject','DomainObject','WorkspaceDomainObject','Artifact','SchedulableArtifact','Defect'],  ObjectID: 3, Name: 'Defect C', AcceptedDate: '2017-07-21T12:00:00Z', Tags: [123], Iteration: 21, Project:projectA, _ValidFrom: '2017-07-21T12:00:43Z', _ValidTo: '2017-08-08T12:00:00Z' }),
-
       ];
-
-
 
       var calcA = Ext.create('CArABU.app.utils.teamMetricsCalculator',{
           project: projectA,
