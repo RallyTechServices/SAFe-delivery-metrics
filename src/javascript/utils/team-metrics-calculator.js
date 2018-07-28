@@ -63,7 +63,8 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
      var offsetDate = Rally.util.DateTime.add(iteration.StartDate, 'day', daysOffsetFromIterationStart),
          iterationEndDate = iteration.EndDate,
          releaseEndDate = this.release.ReleaseDate,
-         pipOffsetDate = Rally.util.DateTime.add(this.release.ReleaseStartDate, 'day', this.daysOffsetFromPIStart);;
+         pipOffsetDate = Rally.util.DateTime.add(this.release.ReleaseStartDate, 'day', this.daysOffsetFromPIStart),
+         currentDate = new Date();
      var snaps = this.snapshotsByIterationOid[iteration.ObjectID] || [],
          blockedDurations = {};
 
@@ -75,11 +76,12 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
          validTo = Rally.util.DateTime.fromIsoString(snap._ValidTo),
          type = snap._TypeHierarchy && snap._TypeHierarchy.slice(-1)[0];
 
-         if (validFrom <= offsetDate && validTo > offsetDate){
+         //KMC - planned points should be 0 if the offset date is in the future.
+         if (validFrom <= offsetDate && validTo > offsetDate && offsetDate <= currentDate){
             data.plannedPoints += snap.PlanEstimate;
             iterationPlannedObjectIDs.push(snap.ObjectID);
          }
-         if (validFrom <= pipOffsetDate && validTo > pipOffsetDate){
+         if (validFrom <= pipOffsetDate && validTo > pipOffsetDate && pipOffsetDate <= currentDate){
             data.piPlanLoad += snap.PlanEstimate;
          }
          //If the snapshot is current and has an accepted date, then
@@ -90,7 +92,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
             iterationAcceptedItems.push(snap);
          }
 
-         if (validFrom <= iterationEndDate && validTo > iterationEndDate){
+         if (validFrom <= iterationEndDate && validTo > iterationEndDate && iterationEndDate <= currentDate){
             data.totalPointsAtSprintEnd += snap.PlanEstimate;
          }
 
@@ -163,7 +165,7 @@ Ext.define('CArABU.app.utils.teamMetricsCalculator',{
       //This assumes they are sorted in ascending order
       if (iteration.CreationDate <= offsetDate){
         _.each(iteration.__iterationPlannedVelocities, function(r){
-           if (r.updateDate <= offsetDate){
+           if (r.updateDate <= offsetDate && offsetDate <= new Date()){
               iterationVelocity = r.value;
            }
         });
